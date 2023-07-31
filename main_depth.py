@@ -5,7 +5,7 @@ import torch
 import torch.utils.data
 from torch.utils.tensorboard import SummaryWriter
 
-from unimatch.unimatch import UniMatch
+from unimatch.model import UniMatch
 from dataloader.depth.datasets import DemonDataset, ScannetDataset
 from dataloader.depth import augmentation
 from loss.depth_loss import depth_loss_func, depth_grad_loss_func

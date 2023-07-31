@@ -1,5 +1,7 @@
 import torch
 import torch.nn.functional as F
+import torchvision.transforms as transforms
+import config
 
 from .geometry import coords_grid, generate_window_grid, normalize_coords
 
@@ -8,11 +10,13 @@ def selective_correlation_softmax(feature0, feature1,
                                ):
     # selective correlation
     b, c, h, w = feature0.shape
-    feature0 = feature0.view(b, c, -1).permute(0, 2, 1)  # [B, H*W, C]
-    feature1 = feature1.view(b, c, -1)  # [B, C, H*W]
 
-    feature0 = feature0
-    feature1 = feature1
+    feature1_transform = transforms.RandomCrop(size = (b, c, h/config.feature1_random_crop_scalar_y, 
+                                                       w/config.feature1_random_crop_scalar_x))
+    feature1 = feature1_transform(feature1)
+
+    feature0 = feature0.view(b, c, -1).permute(0, 2, 1)  # [B, H*W, C]
+    feature1 = feature1.view(b, c, -1)  # old: [B, C, H*W] new: [B, C, H*W/(scalar_y*scalar_x)]
 
     correlation = torch.matmul(feature0, feature1).view(b, h, w, h, w) / (c ** 0.5)  # [B, H, W, H, W]
 
