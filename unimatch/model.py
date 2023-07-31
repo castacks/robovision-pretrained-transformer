@@ -40,7 +40,7 @@ class UniMatch(nn.Module):
                                               nhead=num_head,
                                               ffn_dim_expansion=ffn_dim_expansion,
                                               )
-
+        
         # propagation with self-attn
         self.feature_flow_attn = SelfAttnPropagation(in_channels=feature_channels)
 

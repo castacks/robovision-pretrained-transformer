@@ -19,7 +19,7 @@ from evaluate_stereo import (validate_things, validate_kitti15, validate_eth3d,
                              create_middlebury_submission,
                              inference_stereo,
                              )
-from unimatch.unimatch import UniMatch
+from unimatch.model import UniMatch
 
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
