@@ -15,14 +15,13 @@ def selective_correlation_softmax(feature0, feature1, random_samples_reference_m
     reference_map = torch.tensor()
     
     for i in range(len(random_samples_reference_matrix)):
-        reference_map = torch.cat(reference_map, feature0[random_samples_reference_matrix[i]])
+        reference_map = torch.cat(reference_map, feature0[:, :, random_samples_reference_matrix[i][0], random_samples_reference_matrix[i][1]])
     
-    feature1_transform = transforms.RandomCrop(size = (b, c, torch.round(h*query_image_random_crop_size_scalars[1]), 
-                                                     torch.round(w*query_image_random_crop_size_scalars[0])))
+    feature1_transform = transforms.functional.crop(feature1, random_crop_query_location[0], random_crop_query_location[1], torch.round(query_image_random_crop_size_scalars[0]*h), torch.round(query_image_random_crop_size_scalars[1]*w))
     #random crop of query image
     feature1 = feature1_transform(feature1)
 
-    feature0 = feature0.view(b, c, -1).permute(0, 2, 1)  # [B, H*W, C]
+    feature0 = reference_map.view(b, c, -1).permute(0, 2, 1)  # [B, H*W, C]
     feature1 = feature1.view(b, c, -1)  # [B, C, H*W]
 
     correlation = torch.matmul(feature0, feature1).view(b, h, w, h, w) / (c ** 0.5)  # [B, H, W, H, W]

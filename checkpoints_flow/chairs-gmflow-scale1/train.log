@@ -530,3 +530,256 @@ UniMatch(
 Number of params: 4680288
 Number of training images: 0
 Start training
+/home/mihirsharma/miniconda3/envs/unimatch/lib/python3.8/site-packages/torch/distributed/launch.py:163: DeprecationWarning: The 'warn' method is deprecated, use 'warning' instead
+  logger.warn(
+The module torch.distributed.launch is deprecated and going to be removed in future.Migrate to torch.distributed.run
+WARNING:torch.distributed.run:--use_env is deprecated and will be removed in future releases.
+ Please read local_rank from `os.environ('LOCAL_RANK')` instead.
+INFO:torch.distributed.launcher.api:Starting elastic_operator with launch configs:
+  entrypoint       : main_flow.py
+  min_nodes        : 1
+  max_nodes        : 1
+  nproc_per_node   : 1
+  run_id           : none
+  rdzv_backend     : static
+  rdzv_endpoint    : 127.0.0.1:9989
+  rdzv_configs     : {'rank': 0, 'timeout': 900}
+  max_restarts     : 3
+  monitor_interval : 5
+  log_dir          : None
+  metrics_cfg      : {}
+
+INFO:torch.distributed.elastic.agent.server.local_elastic_agent:log directory set to: /tmp/torchelastic_ie3g5qni/none_zgwh3s1b
+INFO:torch.distributed.elastic.agent.server.api:[default] starting workers for entrypoint: python
+INFO:torch.distributed.elastic.agent.server.api:[default] Rendezvous'ing worker group
+/home/mihirsharma/miniconda3/envs/unimatch/lib/python3.8/site-packages/torch/distributed/elastic/utils/store.py:52: FutureWarning: This is an experimental API and will be changed in future.
+  warnings.warn(
+INFO:torch.distributed.elastic.agent.server.api:[default] Rendezvous complete for workers. Result:
+  restart_count=0
+  master_addr=127.0.0.1
+  master_port=9989
+  group_rank=0
+  group_world_size=1
+  local_ranks=[0]
+  role_ranks=[0]
+  global_ranks=[0]
+  role_world_sizes=[1]
+  global_world_sizes=[1]
+
+INFO:torch.distributed.elastic.agent.server.api:[default] Starting worker group
+INFO:torch.distributed.elastic.multiprocessing:Setting worker0 reply file to: /tmp/torchelastic_ie3g5qni/none_zgwh3s1b/attempt_0/0/error.json
+Namespace(attn_splits_list=[2], attn_type='swin', batch_size=16, checkpoint_dir='checkpoints_flow/chairs-gmflow-scale1', concat_flow_img=False, corr_radius_list=[-1], count_time=False, debug=False, distributed=False, eval=False, evaluate_matched_unmatched=False, feature_channels=128, ffn_dim_expansion=4, fwd_bwd_check=False, gamma=0.9, gpu_ids=0, grad_clip=1.0, image_size=[384, 512], inference_dir=None, inference_size=None, inference_video=None, launcher='pytorch', local_rank=0, lr=0.0004, max_flow=400, no_resume_optimizer=False, no_save_flo=False, num_head=1, num_reg_refine=1, num_scales=1, num_steps=100000, num_transformer_layers=6, num_workers=4, output_path='output', padding_factor=16, pred_bidir_flow=False, pred_bwd_flow=False, prop_radius_list=[-1], reg_refine=False, resume=None, save_ckpt_freq=10000, save_eval_to_file=False, save_flo_flow=False, save_latest_ckpt_freq=1000, save_video=False, save_vis_flow=False, seed=326, stage='chairs', strict_resume=False, submission=False, summary_freq=100, task='flow', upsample_factor=8, val_dataset=['chairs', 'sintel', 'kitti'], val_freq=10000, val_things_clean_only=False, weight_decay=0.0001, with_speed_metric=True)
+UniMatch(
+  (backbone): CNNEncoder(
+    (conv1): Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+    (norm1): InstanceNorm2d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+    (relu1): ReLU(inplace=True)
+    (layer1): Sequential(
+      (0): ResidualBlock(
+        (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (relu): ReLU(inplace=True)
+        (norm1): InstanceNorm2d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (norm2): InstanceNorm2d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+      )
+      (1): ResidualBlock(
+        (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (relu): ReLU(inplace=True)
+        (norm1): InstanceNorm2d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (norm2): InstanceNorm2d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+      )
+    )
+    (layer2): Sequential(
+      (0): ResidualBlock(
+        (conv1): Conv2d(64, 96, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        (conv2): Conv2d(96, 96, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (relu): ReLU(inplace=True)
+        (norm1): InstanceNorm2d(96, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (norm2): InstanceNorm2d(96, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (norm3): InstanceNorm2d(96, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (downsample): Sequential(
+          (0): Conv2d(64, 96, kernel_size=(1, 1), stride=(2, 2))
+          (1): InstanceNorm2d(96, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        )
+      )
+      (1): ResidualBlock(
+        (conv1): Conv2d(96, 96, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (conv2): Conv2d(96, 96, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (relu): ReLU(inplace=True)
+        (norm1): InstanceNorm2d(96, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (norm2): InstanceNorm2d(96, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+      )
+    )
+    (layer3): Sequential(
+      (0): ResidualBlock(
+        (conv1): Conv2d(96, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (relu): ReLU(inplace=True)
+        (norm1): InstanceNorm2d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (norm2): InstanceNorm2d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (norm3): InstanceNorm2d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (downsample): Sequential(
+          (0): Conv2d(96, 128, kernel_size=(1, 1), stride=(2, 2))
+          (1): InstanceNorm2d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        )
+      )
+      (1): ResidualBlock(
+        (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (relu): ReLU(inplace=True)
+        (norm1): InstanceNorm2d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+        (norm2): InstanceNorm2d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
+      )
+    )
+    (conv2): Conv2d(128, 128, kernel_size=(1, 1), stride=(1, 1))
+  )
+  (transformer): FeatureTransformer(
+    (layers): ModuleList(
+      (0): TransformerBlock(
+        (self_attn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+        (cross_attn_ffn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (0): Linear(in_features=256, out_features=1024, bias=False)
+            (1): GELU()
+            (2): Linear(in_features=1024, out_features=128, bias=False)
+          )
+          (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+      (1): TransformerBlock(
+        (self_attn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+        (cross_attn_ffn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (0): Linear(in_features=256, out_features=1024, bias=False)
+            (1): GELU()
+            (2): Linear(in_features=1024, out_features=128, bias=False)
+          )
+          (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+      (2): TransformerBlock(
+        (self_attn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+        (cross_attn_ffn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (0): Linear(in_features=256, out_features=1024, bias=False)
+            (1): GELU()
+            (2): Linear(in_features=1024, out_features=128, bias=False)
+          )
+          (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+      (3): TransformerBlock(
+        (self_attn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+        (cross_attn_ffn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (0): Linear(in_features=256, out_features=1024, bias=False)
+            (1): GELU()
+            (2): Linear(in_features=1024, out_features=128, bias=False)
+          )
+          (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+      (4): TransformerBlock(
+        (self_attn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+        (cross_attn_ffn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (0): Linear(in_features=256, out_features=1024, bias=False)
+            (1): GELU()
+            (2): Linear(in_features=1024, out_features=128, bias=False)
+          )
+          (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+      (5): TransformerBlock(
+        (self_attn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+        (cross_attn_ffn): TransformerLayer(
+          (q_proj): Linear(in_features=128, out_features=128, bias=False)
+          (k_proj): Linear(in_features=128, out_features=128, bias=False)
+          (v_proj): Linear(in_features=128, out_features=128, bias=False)
+          (merge): Linear(in_features=128, out_features=128, bias=False)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (0): Linear(in_features=256, out_features=1024, bias=False)
+            (1): GELU()
+            (2): Linear(in_features=1024, out_features=128, bias=False)
+          )
+          (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+    )
+  )
+  (feature_flow_attn): SelfAttnPropagation(
+    (q_proj): Linear(in_features=128, out_features=128, bias=True)
+    (k_proj): Linear(in_features=128, out_features=128, bias=True)
+  )
+  (upsampler): Sequential(
+    (0): Conv2d(130, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (1): ReLU(inplace=True)
+    (2): Conv2d(256, 576, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Number of params: 4680288
+Number of training images: 0
+Start training
