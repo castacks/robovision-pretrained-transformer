@@ -3,8 +3,7 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 from .geometry import coords_grid, generate_window_grid, normalize_coords
 
-feature1_random_crop_scalar_x = 7
-feature1_random_crop_scalar_y = 7
+query_image_random_crop_size_scalars = [1/7, 1/7]
 
 def selective_correlation_softmax(feature0, feature1, random_samples_reference_matrix, random_crop_query_location,
                                pred_bidir_flow=False, 
@@ -12,14 +11,19 @@ def selective_correlation_softmax(feature0, feature1, random_samples_reference_m
     # selective correlation
     b, c, h, w = feature0.shape
 
-    feature1_transform = transforms.RandomCrop(size = (b, c, h/feature1_random_crop_scalar_y, 
-                                                     w/feature1_random_crop_scalar_x))
+    #reference map consists of random samples from feature0
+    reference_map = torch.tensor()
+    
+    for i in range(len(random_samples_reference_matrix)):
+        reference_map = torch.cat(reference_map, feature0[random_samples_reference_matrix[i]])
+    
+    feature1_transform = transforms.RandomCrop(size = (b, c, torch.round(h*query_image_random_crop_size_scalars[1]), 
+                                                     torch.round(w*query_image_random_crop_size_scalars[0])))
     #random crop of query image
     feature1 = feature1_transform(feature1)
 
     feature0 = feature0.view(b, c, -1).permute(0, 2, 1)  # [B, H*W, C]
     feature1 = feature1.view(b, c, -1)  # [B, C, H*W]
-
 
     correlation = torch.matmul(feature0, feature1).view(b, h, w, h, w) / (c ** 0.5)  # [B, H, W, H, W]
 

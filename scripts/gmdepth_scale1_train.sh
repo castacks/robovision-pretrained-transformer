@@ -4,7 +4,7 @@
 
 # number of gpus for training, please set according to your hardware
 # trained on 8x 40GB A100 gpus
-NUM_GPUS=8
+NUM_GPUS=1
 
 
 # scannet (our final model is trained for 100K steps, for ablation, we train for 50K)
