@@ -22,7 +22,7 @@ class UniMatch(nn.Module):
                  ffn_dim_expansion=4,
                  num_transformer_layers=6,
                  reg_refine=False,  # optional local regression refinement
-                 task='flow',
+                 task='flow'
                  ):
         super(UniMatch, self).__init__()
 
@@ -30,7 +30,7 @@ class UniMatch(nn.Module):
         self.num_scales = num_scales
         self.upsample_factor = upsample_factor
         self.reg_refine = reg_refine
-
+        
         # CNN
         self.backbone = CNNEncoder(output_dim=feature_channels, num_output_scales=num_scales)
 
@@ -99,7 +99,7 @@ class UniMatch(nn.Module):
                 prop_radius_list=None,
                 num_reg_refine=1,
                 pred_bidir_flow=False,
-                task='flow',
+                task='flow', # correlation later
                 intrinsics=None,
                 pose=None,  # relative pose transform
                 min_depth=1. / 0.5,  # inverse depth range
@@ -202,7 +202,7 @@ class UniMatch(nn.Module):
             else:
                 if corr_radius == -1:  # global matching
                     if task == 'flow':
-                        flow_pred = global_correlation_softmax(feature0, feature1, pred_bidir_flow)[0]
+                        flow_pred = global_correlation_softmax(feature0, feature1) #FIXME
                     elif task == 'stereo':
                         flow_pred = global_correlation_softmax_stereo(feature0, feature1)[0]
                     else:
