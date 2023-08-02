@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 from dataloader.flow.datasets import build_train_dataset
-from unimatch.model import UniMatch
+from unimatch.unimatch import UniMatch
 from loss.flow_loss import flow_loss_func
 
 from evaluate_flow import (validate_chairs, validate_things, validate_sintel, validate_kitti,

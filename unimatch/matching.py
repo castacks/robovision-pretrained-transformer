@@ -1,19 +1,19 @@
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as transforms
-import config
-
 from .geometry import coords_grid, generate_window_grid, normalize_coords
+
+feature1_random_crop_scalar_x = 7
+feature1_random_crop_scalar_y = 7
 
 def selective_correlation_softmax(feature0, feature1, random_samples_reference_matrix, random_crop_query_location,
                                pred_bidir_flow=False, 
-                              
                                ):
     # selective correlation
     b, c, h, w = feature0.shape
 
-    feature1_transform = transforms.RandomCrop(size = (b, c, h/config.feature1_random_crop_scalar_y, 
-                                                     w/config.feature1_random_crop_scalar_x))
+    feature1_transform = transforms.RandomCrop(size = (b, c, h/feature1_random_crop_scalar_y, 
+                                                     w/feature1_random_crop_scalar_x))
     #random crop of query image
     feature1 = feature1_transform(feature1)
 
