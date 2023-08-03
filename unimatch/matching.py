@@ -1,28 +1,31 @@
 import torch
 import torch.nn.functional as F
-import hyperparameters
 import torchvision.transforms as transforms
 from .geometry import coords_grid, generate_window_grid, normalize_coords
 
 def selective_correlation_softmax(feature0, feature1):
+    query_image_random_crop_size_scalars = [1/4, 1/4]
 
     # selective correlation
     b, c, h, w = feature0.shape
 
     #random cropping and token selection
-    random_crop_query_location=torch.rand(2).to(feature0.device)
-    query_image_random_crop_size_scalars=torch.tensor(hyperparameters.query_image_random_crop_size_scalars).to(feature0.device)
-    random_samples_reference_matrix=torch.rand(torch.round(query_image_random_crop_size_scalars[0] * h * query_image_random_crop_size_scalars[1] * w)).to(feature0.device)
+    random_crop_query_location=torch.rand(2).to(feature0.device) #random crop location
+    query_image_random_crop_size_scalars=torch.tensor(query_image_random_crop_size_scalars).to(feature0.device) #Crop ratio
+    random_samples_reference_matrix=torch.rand(round(h * query_image_random_crop_size_scalars[0]) * round(w * query_image_random_crop_size_scalars[1]), 2).to(feature0.device) # [Crop Area, 2]
 
     #reference map consists of random samples from feature0
-    reference_map = torch.tensor().to(feature0.device)
+    reference_map = []
+
+    for sample in random_samples_reference_matrix:
+        reference_map.append(feature0[:, :, torch.round(sample[0]*(h-1)).numpy(), torch.round(sample[1]*(w-1)).numpy()]) #FIXME should be: #[B, C, crop_area]
     
-    for i in range(len(random_samples_reference_matrix)):
-        reference_map = torch.cat(reference_map, feature0[:, :, torch.round(random_samples_reference_matrix[i][0]*h), torch.round(random_samples_reference_matrix[i][1])])
-    
-    feature1_transform = transforms.functional.crop(feature1, torch.round(random_crop_query_location[0]*h), torch.round(random_crop_query_location[1]*w), torch.round(query_image_random_crop_size_scalars[0]*h), torch.round(query_image_random_crop_size_scalars[1]*w))
+    reference_map = torch.stack(reference_map).permute(1, 2, 0) #[B, C, crop_area]
+
+    feature1_crop = transforms.functional.crop(feature1, round(random_crop_query_location[0]*(h-1)), round(random_crop_query_location[1]*(w-1)), round(query_image_random_crop_size_scalars[0]*h), torch.round(query_image_random_crop_size_scalars[1]*w))
+
     #random crop of query image
-    feature1 = feature1_transform(feature1)
+    feature1 = feature1_crop(feature1)
 
     feature0 = reference_map
     b, c, h, w = feature0.shape
@@ -30,7 +33,7 @@ def selective_correlation_softmax(feature0, feature1):
     feature0 = feature0.view(b, c, -1).permute(0, 2, 1)  # [B, H*W, C]
     feature1 = feature1.view(b, c, -1)  # [B, C, H*W]
 
-    correlation = torch.matmul(feature0, feature1)#.view(b, h, w, h, w) / (c ** 0.5)  # [B, H, W, H, W]
+    correlation = torch.matmul(feature0, feature1).view(b, h, w, h, w) / (c ** 0.5)  # [B, H, W, H, W]
 
     #prob = F.softmax(correlation.view(b, h * w, h * w), dim=-1)  # [B, H*W, H*W]
 

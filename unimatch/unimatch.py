@@ -202,7 +202,7 @@ class UniMatch(nn.Module):
             else:
                 if corr_radius == -1:  # global matching
                     if task == 'flow':
-                        flow_pred = global_correlation_softmax(feature0, feature1) #FIXME
+                        flow_pred = global_correlation_softmax(feature0, feature1, pred_bidir_flow)[0] #FIXME
                     elif task == 'stereo':
                         flow_pred = global_correlation_softmax_stereo(feature0, feature1)[0]
                     else:
