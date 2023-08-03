@@ -22,10 +22,12 @@ def selective_correlation_softmax(feature0, feature1):
     
     reference_map = torch.stack(reference_map).permute(1, 2, 0).to(feature0.device) #[B, C, crop_area]
 
-    feature1_crop = transforms.functional.crop(feature1, round(random_crop_query_location[0]*(h-1)), round(random_crop_query_location[1]*(w-1)), round(query_image_random_crop_size_scalars[0]*h), torch.round(query_image_random_crop_size_scalars[1]*w))
 
     #random crop of query image
-    feature1 = feature1_crop(feature1)
+    feature1= transforms.functional.crop(feature1, round(query_image_random_crop_size_scalars[0]*(h-1)), 
+                                         round(query_image_random_crop_size_scalars[1]*(w-1)), 
+                                         round(query_image_random_crop_size_scalars[0]*h), 
+                                         round(query_image_random_crop_size_scalars[1]*w))
 
     feature0 = reference_map
     b, c, h, w = feature0.shape
