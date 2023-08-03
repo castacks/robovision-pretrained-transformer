@@ -1,5 +1,5 @@
 # robovision-pretrained-transformer
-Pretrained Transformer-based Feature Extractor for Robot Vision
+Pretrained Transformer-based Feature Extractor for Robotic Vision
 
 Credits to Unimatch, whose source code serves as the basis of our model:
 
