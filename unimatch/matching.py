@@ -23,8 +23,8 @@ def selective_correlation_softmax(feature0, feature1):
 
 
     #random crop of query image
-    feature1= transforms.functional.crop(feature1, round(query_image_random_crop_size_scalars[0]*(h-1)), 
-                                            round(query_image_random_crop_size_scalars[1]*(w-1)), 
+    feature1= transforms.functional.crop(feature1, round(random_crop_query_location[0]*(h-1)), 
+                                            round(random_crop_query_location[1]*(w-1)), 
                                             round(query_image_random_crop_size_scalars[0]*h), 
                                             round(query_image_random_crop_size_scalars[1]*w))
 
@@ -35,7 +35,7 @@ def selective_correlation_softmax(feature0, feature1):
     #correlation after matrix multiplication and applying softmax
     correlation = F.softmax(torch.matmul(feature0, feature1).float(), dim=-1).view(b, h * w, h, w) # [B, crop area, crop area height, crop area width]
 
-    return correlation
+    return correlation, random_crop_query_location, query_image_random_crop_size_scalars, random_samples_reference_matrix
 
 def global_correlation_softmax(feature0, feature1,
                                pred_bidir_flow=False,

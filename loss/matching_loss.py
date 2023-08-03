@@ -1,6 +1,6 @@
 import torch
 
-def flow_loss_func(flow_preds, flow_gt, valid,
+def matching_loss_func(flow_preds, flow_gt, valid,
                    gamma=0.9,
                    max_flow=400,
                    **kwargs,

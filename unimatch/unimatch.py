@@ -6,7 +6,7 @@ from .backbone import CNNEncoder
 from .transformer import FeatureTransformer
 from .matching import (global_correlation_softmax, local_correlation_softmax, local_correlation_with_flow,
                        global_correlation_softmax_stereo, local_correlation_softmax_stereo,
-                       correlation_softmax_depth)
+                       correlation_softmax_depth, selective_correlation_softmax)
 from .attention import SelfAttnPropagation
 from .geometry import flow_warp, compute_flow_with_depth_pose
 from .reg_refine import BasicUpdateBlock
@@ -202,9 +202,11 @@ class UniMatch(nn.Module):
             else:
                 if corr_radius == -1:  # global matching
                     if task == 'flow':
-                        flow_pred = global_correlation_softmax(feature0, feature1, pred_bidir_flow)[0] #FIXME
+                        flow_pred = global_correlation_softmax(feature0, feature1, pred_bidir_flow)[0]
                     elif task == 'stereo':
                         flow_pred = global_correlation_softmax_stereo(feature0, feature1)[0]
+                    elif task == 'matching':
+                        matching_prediction_and_information = selective_correlation_softmax(feature0, feature1)
                     else:
                         raise NotImplementedError
                 else:  # local matching
@@ -212,6 +214,8 @@ class UniMatch(nn.Module):
                         flow_pred = local_correlation_softmax(feature0, feature1, corr_radius)[0]
                     elif task == 'stereo':
                         flow_pred = local_correlation_softmax_stereo(feature0, feature1, corr_radius)[0]
+                    elif task == 'matching':
+                        matching_prediction_and_information = selective_correlation_softmax(feature0, feature1)
                     else:
                         raise NotImplementedError
 
@@ -364,4 +368,7 @@ class UniMatch(nn.Module):
 
         results_dict.update({'flow_preds': flow_preds})
 
-        return results_dict
+        if(task != 'matching'):
+            return results_dict
+        else:
+            return matching_prediction_and_information
