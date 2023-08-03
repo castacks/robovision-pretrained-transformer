@@ -18,7 +18,7 @@ def selective_correlation_softmax(feature0, feature1):
     reference_map = []
 
     for sample in random_samples_reference_matrix:
-        reference_map.append(feature0[:, :, torch.round(sample[0]*(h-1)).numpy(), torch.round(sample[1]*(w-1)).numpy()]) #FIXME should be: #[B, C, crop_area]
+        reference_map.append(feature0[:, :, torch.round(sample[0]*(h-1)).numpy(), torch.round(sample[1]*(w-1)).numpy()])
     
     reference_map = torch.stack(reference_map).permute(1, 2, 0).to(feature0.device) #[B, C, crop_area]
 
@@ -30,7 +30,7 @@ def selective_correlation_softmax(feature0, feature1):
                                          round(query_image_random_crop_size_scalars[1]*w))
 
     feature0 = reference_map
-    b, c, h, w = feature0.shape
+    h, w = round(h * query_image_random_crop_size_scalars[0]), round(w * query_image_random_crop_size_scalars[1])
 
     feature0 = feature0.view(b, c, -1).permute(0, 2, 1)  # [B, H*W, C]
     feature1 = feature1.view(b, c, -1)  # [B, C, H*W]
