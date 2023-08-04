@@ -373,7 +373,7 @@ def main(args):
 
         return
 
-    train_dataset = build_train_dataset(args)
+    train_dataset = build_train_dataset(args) #FIXME
     print('Number of training images:', len(train_dataset))
 
     # multi-processing
@@ -389,9 +389,8 @@ def main(args):
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,
                                                shuffle=shuffle, num_workers=args.num_workers,
                                                pin_memory=True, drop_last=True,
-                                               sampler=train_sampler)
+                                               sampler=train_sampler) #FIXME
     
-    tartan_train_loader = 0 #FIXME
 
     last_epoch = start_step if args.resume and start_step > 0 else -1
     lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -428,15 +427,15 @@ def main(args):
                                  corr_radius_list=args.corr_radius_list,
                                  prop_radius_list=args.prop_radius_list,
                                  num_reg_refine=args.num_reg_refine,
-                                 task='flow',
-                                 )
+                                 task='matching',
+                                 ) # FIXME
 
-            flow_preds = results_dict['flow_preds']
+            flow_preds = results_dict['flow_preds'] #FIXME
 
             loss, metrics = flow_loss_func(flow_preds, flow_gt, valid,
                                            gamma=args.gamma,
                                            max_flow=args.max_flow,
-                                           )
+                                           ) #FIXME
 
             if isinstance(loss, float):
                 continue
