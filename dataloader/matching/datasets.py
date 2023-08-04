@@ -17,6 +17,10 @@ def build_train_dataset():
     return matching_dataset
 
 
+def generate_dataloader():
+    placeholder = 0 #FIXME
+
+
 # # uncompress the data
 # def flow16to32(flow16):
 #     '''
