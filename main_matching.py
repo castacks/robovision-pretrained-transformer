@@ -6,10 +6,9 @@ import argparse
 import numpy as np
 import os
 
-from dataloader.flow.datasets import build_train_dataset
+from dataloader.matching.datasets import build_train_dataset
 from unimatch.unimatch import UniMatch
 from loss.flow_loss import flow_loss_func
-from loss.matching_loss import matching_loss_func
 
 from evaluate_flow import (validate_chairs, validate_things, validate_sintel, validate_kitti,
                            create_kitti_submission, create_sintel_submission,
@@ -391,6 +390,8 @@ def main(args):
                                                shuffle=shuffle, num_workers=args.num_workers,
                                                pin_memory=True, drop_last=True,
                                                sampler=train_sampler)
+    
+    tartan_train_loader = 0 #FIXME
 
     last_epoch = start_step if args.resume and start_step > 0 else -1
     lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -421,16 +422,18 @@ def main(args):
         for i, sample in enumerate(train_loader):
             img1, img2, flow_gt, valid = [x.to(device) for x in sample]
 
-            matching_prediction_and_information = model(img1, img2,
+            results_dict = model(img1, img2,
                                  attn_type=args.attn_type,
                                  attn_splits_list=args.attn_splits_list,
                                  corr_radius_list=args.corr_radius_list,
                                  prop_radius_list=args.prop_radius_list,
                                  num_reg_refine=args.num_reg_refine,
-                                 task='matching',
+                                 task='flow',
                                  )
 
-            loss, metrics = matching_loss_func(matching_prediction_and_information, flow_gt, valid,
+            flow_preds = results_dict['flow_preds']
+
+            loss, metrics = flow_loss_func(flow_preds, flow_gt, valid,
                                            gamma=args.gamma,
                                            max_flow=args.max_flow,
                                            )

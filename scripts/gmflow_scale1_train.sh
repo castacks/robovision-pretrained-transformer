@@ -12,9 +12,9 @@ mkdir -p ${CHECKPOINT_DIR} && \
 python -m torch.distributed.launch --nproc_per_node=${NUM_GPUS} --master_port=9989 main_flow.py \
 --launcher pytorch \
 --checkpoint_dir ${CHECKPOINT_DIR} \
---stage chairs \
+--stage sintel \
 --batch_size 16 \
---val_dataset chairs sintel kitti \
+--val_dataset sintel \
 --lr 4e-4 \
 --image_size 384 512 \
 --padding_factor 16 \
