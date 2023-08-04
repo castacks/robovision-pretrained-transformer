@@ -9,7 +9,7 @@ import os
 from dataloader.matching.datasets import build_train_dataset
 from unimatch.unimatch import UniMatch
 from loss.flow_loss import flow_loss_func
-
+from loss.matching_loss import matching_loss_func
 from evaluate_flow import (validate_chairs, validate_things, validate_sintel, validate_kitti,
                            create_kitti_submission, create_sintel_submission,
                            inference_flow,
@@ -374,6 +374,7 @@ def main(args):
         return
 
     train_dataset = build_train_dataset(args) #FIXME
+
     print('Number of training images:', len(train_dataset))
 
     # multi-processing
@@ -418,10 +419,10 @@ def main(args):
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
-        for i, sample in enumerate(train_loader):
+        for i, sample in enumerate(train_loader): #FIXME
             img1, img2, flow_gt, valid = [x.to(device) for x in sample]
 
-            results_dict = model(img1, img2,
+            matching_preds_and_information = model(img1, img2,
                                  attn_type=args.attn_type,
                                  attn_splits_list=args.attn_splits_list,
                                  corr_radius_list=args.corr_radius_list,
@@ -430,12 +431,9 @@ def main(args):
                                  task='matching',
                                  ) # FIXME
 
-            flow_preds = results_dict['flow_preds'] #FIXME
+            matching_preds = matching_preds_and_information[0]# flow_preds = results_dict['flow_preds'] #FIXME
 
-            loss, metrics = flow_loss_func(flow_preds, flow_gt, valid,
-                                           gamma=args.gamma,
-                                           max_flow=args.max_flow,
-                                           ) #FIXME
+            loss, metrics = matching_loss_func(matching_preds, matching_gt) #FIXME
 
             if isinstance(loss, float):
                 continue
@@ -461,7 +459,7 @@ def main(args):
             if args.local_rank == 0:
                 logger.push(metrics)
 
-                logger.add_image_summary(img1, img2, flow_preds, flow_gt)
+                logger.add_image_summary(img1, img2, flow_preds, flow_gt) #FIXME
 
             total_steps += 1
 

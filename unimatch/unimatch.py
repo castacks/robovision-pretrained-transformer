@@ -206,7 +206,7 @@ class UniMatch(nn.Module):
                     elif task == 'stereo':
                         flow_pred = global_correlation_softmax_stereo(feature0, feature1)[0]
                     elif task == 'matching':
-                        matching_prediction_and_information = selective_correlation_softmax(feature0, feature1)
+                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1)
                     else:
                         raise NotImplementedError
                 else:  # local matching
@@ -215,7 +215,7 @@ class UniMatch(nn.Module):
                     elif task == 'stereo':
                         flow_pred = local_correlation_softmax_stereo(feature0, feature1, corr_radius)[0]
                     elif task == 'matching':
-                        matching_prediction_and_information = selective_correlation_softmax(feature0, feature1)
+                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1)
                     else:
                         raise NotImplementedError
 
@@ -371,4 +371,4 @@ class UniMatch(nn.Module):
         if(task != 'matching'):
             return results_dict
         else:
-            return matching_prediction_and_information
+            return matching_preds_and_information
