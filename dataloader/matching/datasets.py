@@ -17,16 +17,16 @@ def build_train_dataset():
     return matching_dataset
 
 
-# uncompress the data
-def flow16to32(flow16):
-    '''
-    flow_32b (float32) [-512.0, 511.984375]
-    flow_16b (uint16) [0 - 65535]
-    flow_32b = (flow16 -32768) / 64
-    '''
-    flow32 = flow16[:,:,:2].astype(np.float32)
-    flow32 = (flow32 - 32768) / 64.0
+# # uncompress the data
+# def flow16to32(flow16):
+#     '''
+#     flow_32b (float32) [-512.0, 511.984375]
+#     flow_16b (uint16) [0 - 65535]
+#     flow_32b = (flow16 -32768) / 64
+#     '''
+#     flow32 = flow16[:,:,:2].astype(np.float32)
+#     flow32 = (flow32 - 32768) / 64.0
 
-    mask8 = flow16[:,:,2].astype(np.uint8)
-    return flow32, mask8
+#     mask8 = flow16[:,:,2].astype(np.uint8)
+#     return flow32, mask8
 

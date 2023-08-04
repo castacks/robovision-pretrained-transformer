@@ -22,7 +22,7 @@ class UniMatch(nn.Module):
                  ffn_dim_expansion=4,
                  num_transformer_layers=6,
                  reg_refine=False,  # optional local regression refinement
-                 task='flow'
+                 task='matching'
                  ):
         super(UniMatch, self).__init__()
 
@@ -57,7 +57,7 @@ class UniMatch(nn.Module):
             self.refine_proj = nn.Conv2d(128, 256, 1)
             self.refine = BasicUpdateBlock(corr_channels=(2 * 4 + 1) ** 2,
                                            downsample_factor=upsample_factor,
-                                           flow_dim=2 if task == 'flow' else 1,
+                                           flow_dim=2 if (task == 'flow' or task == 'matching') else 1,
                                            bilinear_up=task == 'depth',
                                            )
 
@@ -99,7 +99,7 @@ class UniMatch(nn.Module):
                 prop_radius_list=None,
                 num_reg_refine=1,
                 pred_bidir_flow=False,
-                task='flow', # correlation later
+                task='matching', # correlation later
                 intrinsics=None,
                 pose=None,  # relative pose transform
                 min_depth=1. / 0.5,  # inverse depth range
@@ -111,7 +111,7 @@ class UniMatch(nn.Module):
                 ):
 
         if pred_bidir_flow:
-            assert task == 'flow'
+            assert (task == 'flow' or task == 'matching')
 
         if task == 'depth':
             assert self.num_scales == 1  # multi-scale depth model is not supported yet
@@ -119,9 +119,9 @@ class UniMatch(nn.Module):
         results_dict = {}
         flow_preds = []
 
-        if task == 'flow':
+        if (task == 'flow' or task == 'matching'): #FIXME
             # stereo and depth tasks have normalized img in dataloader
-            img0, img1 = normalize_img(img0, img1)  # [B, 3, H, W]
+            img0, img1 = normalize_img(img0, img1)  # [B, 3, H, W] 
 
         # list of features, resolution low to high
         feature0_list, feature1_list = self.extract_feature(img0, img1)  # list of features
@@ -164,7 +164,7 @@ class UniMatch(nn.Module):
                     # NOTE: reverse disp, disparity is positive
                     displace = torch.cat((-flow, zeros), dim=1)  # [B, 2, H, W]
                     feature1 = flow_warp(feature1, displace)  # [B, C, H, W]
-                elif task == 'flow':
+                elif (task == 'flow' or task == 'matching'): #FIXME
                     feature1 = flow_warp(feature1, flow)  # [B, C, H, W]
                 else:
                     raise NotImplementedError
@@ -214,8 +214,8 @@ class UniMatch(nn.Module):
                         flow_pred = local_correlation_softmax(feature0, feature1, corr_radius)[0]
                     elif task == 'stereo':
                         flow_pred = local_correlation_softmax_stereo(feature0, feature1, corr_radius)[0]
-                    elif task == 'matching':
-                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1)
+                    elif task == 'matching': #FIXME
+                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1) #FIXME
                     else:
                         raise NotImplementedError
 
