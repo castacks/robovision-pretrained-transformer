@@ -373,7 +373,7 @@ def main(args):
 
         return
 
-    train_dataset = build_train_dataset(args) #FIXME
+    train_dataset = build_train_dataset() #FIXME
 
     print('Number of training images:', len(train_dataset))
 
@@ -420,7 +420,7 @@ def main(args):
             train_sampler.set_epoch(epoch)
 
         for i, sample in enumerate(train_loader): #FIXME
-            img1, img2, flow_gt, valid = [x.to(device) for x in sample]
+            img1, img2, matching_gt, valid = [x.to(device) for x in sample] #FIXME
 
             matching_preds_and_information = model(img1, img2,
                                  attn_type=args.attn_type,
@@ -459,7 +459,7 @@ def main(args):
             if args.local_rank == 0:
                 logger.push(metrics)
 
-                logger.add_image_summary(img1, img2, flow_preds, flow_gt) #FIXME
+                logger.add_image_summary(img1, img2, matching_preds, matching_gt) #FIXME
 
             total_steps += 1
 
