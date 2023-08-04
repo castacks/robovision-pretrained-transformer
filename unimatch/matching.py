@@ -10,7 +10,7 @@ def selective_correlation_softmax(feature0, feature1):
 
     #random cropping and token selection
     random_crop_query_location=torch.rand(2).to(feature0.device) #random crop location
-    query_image_random_crop_size_scalars = [1/2, 1/2] #Crop area ratio
+    query_image_random_crop_size_scalars = [1/4, 1/4] #Crop area ratio
     random_samples_reference_matrix=torch.rand(round(h * query_image_random_crop_size_scalars[0]) * round(w * query_image_random_crop_size_scalars[1]), 2).to(feature0.device) # [Crop Area, 2]
 
     #reference map consists of random samples from feature0
@@ -20,7 +20,6 @@ def selective_correlation_softmax(feature0, feature1):
         reference_map.append(feature0[:, :, torch.round(sample[0]*(h-1)).numpy(), torch.round(sample[1]*(w-1)).numpy()])
 
     feature0 = torch.stack(reference_map).permute(1, 0, 2).to(feature0.device) #[B, C, crop_area]
-
 
     #random crop of query image
     feature1= transforms.functional.crop(feature1, round(random_crop_query_location[0]*(h-1)), 

@@ -9,6 +9,7 @@ import os
 from dataloader.flow.datasets import build_train_dataset
 from unimatch.unimatch import UniMatch
 from loss.flow_loss import flow_loss_func
+from loss.matching_loss import matching_loss_func
 
 from evaluate_flow import (validate_chairs, validate_things, validate_sintel, validate_kitti,
                            create_kitti_submission, create_sintel_submission,
@@ -67,7 +68,7 @@ def get_args_parser():
     parser.add_argument('--no_resume_optimizer', action='store_true')
 
     # model: learnable parameters
-    parser.add_argument('--task', default='flow', choices=['flow', 'stereo', 'depth'], type=str)
+    parser.add_argument('--task', default='matching', choices=['flow', 'stereo', 'depth', 'matching'], type=str)
     parser.add_argument('--num_scales', default=1, type=int,
                         help='feature scales: 1/8 or 1/8 + 1/4')
     parser.add_argument('--feature_channels', default=128, type=int)
@@ -420,18 +421,16 @@ def main(args):
         for i, sample in enumerate(train_loader):
             img1, img2, flow_gt, valid = [x.to(device) for x in sample]
 
-            # results_dict = model(img1, img2,
-            #                      attn_type=args.attn_type,
-            #                      attn_splits_list=args.attn_splits_list,
-            #                      corr_radius_list=args.corr_radius_list,
-            #                      prop_radius_list=args.prop_radius_list,
-            #                      num_reg_refine=args.num_reg_refine,
-            #                      task='flow',
-            #                      )
+            matching_prediction_and_information = model(img1, img2,
+                                 attn_type=args.attn_type,
+                                 attn_splits_list=args.attn_splits_list,
+                                 corr_radius_list=args.corr_radius_list,
+                                 prop_radius_list=args.prop_radius_list,
+                                 num_reg_refine=args.num_reg_refine,
+                                 task='matching',
+                                 )
 
-            # flow_preds = results_dict['flow_preds']
-
-            loss, metrics = flow_loss_func(flow_preds, flow_gt, valid,
+            loss, metrics = matching_loss_func(matching_prediction_and_information, flow_gt, valid,
                                            gamma=args.gamma,
                                            max_flow=args.max_flow,
                                            )
