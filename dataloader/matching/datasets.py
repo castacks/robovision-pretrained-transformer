@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import tartanair as ta
 from torch.utils.data import Dataset, DataLoader
+from tartanair.data_management.flow_from_depth_motion import flow_from_depth_motion #FIXME
 
 tartanairv2_data_root = 'datasets/tartanairv2' #FIXME
 ta.init(tartanairv2_data_root)
@@ -20,6 +21,7 @@ def build_train_dataset():
 def generate_dataloader():
     placeholder = 0 #FIXME
 
+flow = flow_from_depth_motion() #FIXME
 
 # # uncompress the data
 # def flow16to32(flow16):

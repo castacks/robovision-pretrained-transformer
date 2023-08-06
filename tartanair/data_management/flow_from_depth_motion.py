@@ -8,10 +8,8 @@ The flow images are saved in the Middlebury format.
 '''
 
 # General imports.
-import os
 import sys
 import numpy as np
-import cv2
 import torch
 from scipy.spatial.transform import Rotation
 
