@@ -545,6 +545,17 @@ def flow_from_depth_motion(depth0, motion01, camera_model, device = 'cuda'): #, 
     # flow = torch.clamp(flow, -clipping, clipping)
     return flow
 
+def flow16to32(flow16):
+    '''
+    flow_32b (float32) [-512.0, 511.984375]
+    flow_16b (uint16) [0 - 65535]
+    flow_32b = (flow16 -32768) / 64
+    '''
+    flow32 = flow16[:,:,:2].astype(np.float32)
+    flow32 = (flow32 - 32768) / 64.0
+
+    mask8 = flow16[:,:,2].astype(np.uint8)
+    return flow32, mask8
 
 ################################################################################
 
@@ -585,48 +596,70 @@ gt_poses = np.loadtxt(pose_gfp)
 starttime = time.time()
 flow_from_depth_list = []
 image_list = []
+flow_list = []
 
-for ix in range(round(len(pin_depth0_gfps)/2-2)):
+def build_train_dataset():
+
+    for ix in range(round(len(pin_depth0_gfps)/2-2)):
+        
+        ############################
+        # START: A bunch of transformations for no good reason.
+        ############################
+        # Get the motion. And convert to xyz, rotvec. 
+        pos_quat = np.array(gt_poses[ix:ix+2, :])
+        traj_motions  = pos_quats2ses(pos_quat) # From xyz, xyzw format, to relative motion (1x6) format.
+
+        sample_motion = traj_motions[0, :]
     
-    ############################
-    # START: A bunch of transformations for no good reason.
-    ############################
-    # Get the motion. And convert to xyz, rotvec. 
-    pos_quat = np.array(gt_poses[ix:ix+2, :])
-    traj_motions  = pos_quats2ses(pos_quat) # From xyz, xyzw format, to relative motion (1x6) format.
 
-    sample_motion = traj_motions[0, :]
-  
+        image0 = TartanAirImageReader().read_bgr(pin_bgr0_gfps[ix])
+        image0 = torch.tensor(image0, device = 'cuda').float()
 
-    image0 = TartanAirImageReader().read_bgr(pin_bgr0_gfps[ix])
-    image0 = torch.tensor(image0, device = 'cuda').float()
+        # Load the depth image.
+        depth0 = TartanAirImageReader().read_depth(pin_depth0_gfps[ix])
+        depth0 = torch.tensor(depth0, device = 'cuda').float()
 
-    # Load the depth image.
-    depth0 = TartanAirImageReader().read_depth(pin_depth0_gfps[ix])
-    depth0 = torch.tensor(depth0, device = 'cuda').float()
+        flow0 = TartanAirImageReader().read_flow(pin_flow_gfps[ix])
+        flow0 = torch.tensor(flow0, device = 'cuda').float()
+        
+        # flow_from_depth = flow_from_depth_motion(depth0, sample_motion, pin_camera_model, device = depth0.device)
+        # flow_from_depth_list.append(flow_from_depth.to(torch.float16))
+        image_list.append(image0.to(torch.float16))
+        flow_list.append(flow0.to(torch.float16))
 
-    # # debug multi-batch 
-    # depth0 = torch.stack((depth0, depth0), dim=0)
-    # sample_motion = np.stack((sample_motion, sample_motion), axis=0)
+    torch.cuda.empty_cache()
 
-    # # Convert to distance. This assumes that the camera model is ideal (90 degrees fov, square image).
-    # pin_dist0 = depth_to_dist(depth0).cpu().numpy()
-    # # pin_dist0_img = visualizer.visdepth(pin_dist0)
-    # pin_dist0 = torch.tensor(pin_dist0, device = 'cuda').float()
-    # # Compute the optical flow.
-    # # sample_motion = np.array([0,0,0,0,0,0,1],dtype=np.float32) # debug
-    # flow_pin_sample = flow_from_dist_motion(pin_dist0, sample_motion, pin_camera_model, device = pin_dist0.device ) # Output is torch.tensor (2, H, W).
-    # flow = flow_pin_sample.cpu().numpy().transpose(1,2,0)
-    
-    flow_from_depth = flow_from_depth_motion(depth0, sample_motion, pin_camera_model, device = depth0.device)
-    flow_from_depth_list.append(flow_from_depth.to(torch.float16))
-    image_list.append(image0.to(torch.float16))
+    # flow = torch.stack(flow_from_depth_list)
+    flow = torch.stack(flow_list)
 
+    print(flow.shape)
 
-flow = torch.stack(flow_from_depth_list)
+    images = torch.stack(image_list)
+
+    print(images.shape)
+
+    # feature_flow = torch.nn.functional.avg_pool2d(flow, 8)
+
+    # feature_correlation = torch.empty(size=())
+
+    # print(feature_flow.shape)
+
+    # return images, feature_correlation
+
+# build_train_dataset()
+
+import cv2
+
+flow16 = cv2.imread(pin_flow_gfps[0], cv2.IMREAD_UNCHANGED)
+
+flow16, mask = flow16to32(flow16)
+
+flow = torch.tensor(flow16, device = 'cuda').float()
+mask = torch.tensor(mask, device = 'cuda').float().unsqueeze(dim=-1)
+
+flow = torch.cat((flow, mask), dim = -1).to(flow.device).float()
 
 print(flow.shape)
 
-images = torch.stack(image_list)
+# print(flow[])
 
-print(images.shape)
