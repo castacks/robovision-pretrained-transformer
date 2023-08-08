@@ -599,21 +599,22 @@ starttime = time.time()
 image_list = []
 flow_list = []
 
-def build_train_dataset(batch_size = 12, dataset_size = 0.5, crop_size = [1/4, 1/4], downsample_size = 8):
+def build_train_dataset(batch_size = 12, dataset_size = 0.5, crop_size = [1/4, 1/4], downsample_size = 8, standard_deviation = 2):
 
     for ix in range(round(len(pin_depth0_gfps)*dataset_size-2)):
 
+        #Converting raw png image to tensor
         image = TartanAirImageReader().read_bgr(pin_bgr0_gfps[ix])
-        image = torch.tensor(image, device = 'cuda').float()
+        image = torch.tensor(image, device = 'cuda').float().permute(2, 0, 1)
 
-        h, w, c = image.shape
+        c, h, w = image.shape
 
-        #random cropping and token selection
+        #Random cropping and token selection
         random_crop_query_location=torch.rand(2).to('cuda') #random crop location
         random_samples_reference_matrix=torch.rand(round(h * crop_size[0] / downsample_size) * round(w * crop_size[1] / downsample_size), 2).to('cuda') # [Crop Area, 2]
         
         
-        #Decompressing flow to flow and mask
+        #Decompressing flow to both flow and mask
         flow16 = cv2.imread(pin_flow_gfps[ix], cv2.IMREAD_UNCHANGED)
         flow16, mask = flow16to32(flow16)
         flow = torch.tensor(flow16, device = 'cuda').float()
@@ -622,14 +623,11 @@ def build_train_dataset(batch_size = 12, dataset_size = 0.5, crop_size = [1/4, 1
         #Masked pixels become 0
         masked_flow = torch.mul(flow, mask).permute(2, 0, 1)
 
-
-        c_mf, h_mf, w_mf = masked_flow.shape
-        feature_flow = transforms.functional.crop(masked_flow, round(random_crop_query_location[0].item()*(h_mf-1)), 
-                                                    round(random_crop_query_location[1].item()*(w_mf-1)), 
-                                                    round(crop_size[0]*h_mf), 
-                                                    round(crop_size[1]*w_mf))
-
         feature_flow = torch.nn.functional.avg_pool2d(masked_flow, kernel_size = downsample_size, stride = downsample_size)
+
+        selective_feature_flow = torch.index_select(feature_flow, )
+
+        feature_correlation = 0 #FIXME
 
         image_list.append(image.to(torch.float16))
         # flow_list.append(flow0.to(torch.float16))
@@ -645,35 +643,46 @@ def build_train_dataset(batch_size = 12, dataset_size = 0.5, crop_size = [1/4, 1
 # build_train_dataset()
 
 
+image = TartanAirImageReader().read_bgr(pin_bgr0_gfps[0])
+image = torch.tensor(image, device = 'cuda').float().permute(2, 0, 1)
+crop_size = [1/4, 1/4] 
+downsample_size = 8
+c, h, w = image.shape
 
+feature_map_crop_height = round(h * crop_size[0] / downsample_size)
+feature_map_crop_width = round(w * crop_size[1] / downsample_size)
+
+
+#Random cropping and token selection
+random_crop_query_location=torch.rand(2).to('cuda') #random crop location
+random_samples_reference_matrix=torch.rand(feature_map_crop_height * feature_map_crop_width, 2).to('cuda') # [Crop Area, 2]
+
+random_samples_reference = torch.rand(feature_map_crop_height * feature_map_crop_width).to('cuda') # [Crop Area]
+
+
+#Decompressing flow to both flow and mask
 flow16 = cv2.imread(pin_flow_gfps[0], cv2.IMREAD_UNCHANGED)
-
 flow16, mask = flow16to32(flow16)
-
 flow = torch.tensor(flow16, device = 'cuda').float()
 mask = torch.tensor(mask, device = 'cuda').float().unsqueeze(dim=-1) / 100
 
 
+#Masked pixels become 0
 masked_flow = torch.mul(flow, mask).permute(2, 0, 1)
-print(masked_flow.shape)
 
-random_crop_query_location=torch.rand(2).to('cuda') #random crop location
-
-c, h ,w = masked_flow.shape
-
-print(random_crop_query_location[0])
-
-feature_flow = transforms.functional.crop(masked_flow, round(random_crop_query_location[0].item()*(h-1)), 
-                                            round(random_crop_query_location[1].item()*(w-1)), 
-                                            round(1/4*h), 
-                                            round(1/4*w))
-
-feature_flow = torch.nn.functional.avg_pool2d(feature_flow, kernel_size = 8, stride = 8)
+feature_flow = torch.nn.functional.avg_pool2d(masked_flow, kernel_size = downsample_size, stride = downsample_size)
 
 print(feature_flow.shape)
 
-# image = TartanAirImageReader().read_bgr(pin_bgr0_gfps[0])
-# image = torch.tensor(image, device = 'cuda').float()
+c_ff, h_ff, w_ff = feature_flow.shape
 
-# print(image.shape)
+feature_flow = feature_flow.view(c_ff, h_ff * w_ff)
 
+print(feature_flow.shape)
+
+selective_masked_flow_indices = torch.round(random_samples_reference * h_ff * w_ff).to(torch.int32)
+print(selective_masked_flow_indices.shape)
+
+selective_masked_flow = torch.index_select(feature_flow, 1, selective_masked_flow_indices).view(c_ff, feature_map_crop_height, feature_map_crop_width)
+
+print(selective_masked_flow.shape)
