@@ -676,13 +676,29 @@ print(feature_flow.shape)
 
 c_ff, h_ff, w_ff = feature_flow.shape
 
-feature_flow = feature_flow.view(c_ff, h_ff * w_ff)
+flattened_feature_flow = feature_flow.view(c_ff, h_ff * w_ff)
 
-print(feature_flow.shape)
+print(flattened_feature_flow.shape)
 
 selective_masked_flow_indices = torch.round(random_samples_reference * h_ff * w_ff).to(torch.int32)
 print(selective_masked_flow_indices.shape)
 
-selective_masked_flow = torch.index_select(feature_flow, 1, selective_masked_flow_indices).view(c_ff, feature_map_crop_height, feature_map_crop_width)
+selective_masked_flow = torch.index_select(flattened_feature_flow, 1, selective_masked_flow_indices)
 
 print(selective_masked_flow.shape)
+print(selective_masked_flow_indices.shape)
+
+#Recovers x, y coordinates from 1D positions
+reference_x_y_coords =  torch.cat([(selective_masked_flow_indices % feature_map_crop_width).unsqueeze(dim=-1).permute(1, 0), (torch.ceil(selective_masked_flow_indices / feature_map_crop_width).unsqueeze(dim=-1)).permute(1, 0)]).to(torch.int32)
+
+print(reference_x_y_coords[1, 100])
+
+correlation_positions = torch.add(selective_masked_flow, selective_masked_flow_indices)
+
+
+
+print(correlation_positions.shape)
+
+# print(correlation_positions)
+
+
