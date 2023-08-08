@@ -695,12 +695,12 @@ print(reference_x_y_coords[1, 100])
 
 correlation_positions = torch.add(selective_masked_flow, selective_masked_flow_indices)
 
-print(random_crop_query_location)
+print(random_crop_query_location.unsqueeze(-1).repeat(1, feature_map_crop_height * feature_map_crop_width).shape)
 
-# relative_correlation_positions = torch.sub(correlation_positions, random_crop_query_location)
+relative_correlation_positions = torch.sub(correlation_positions, random_crop_query_location.unsqueeze(-1).repeat(1, feature_map_crop_height * feature_map_crop_width))
 
 print(correlation_positions.shape)
 
-# print(correlation_positions)
+print(relative_correlation_positions[1, 250])
 
 
