@@ -1,9 +1,11 @@
 import sys
 import os
+import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
 import copy
+import torchvision.transforms as transforms
 import math
 import re
 from scipy.spatial.transform import Rotation
@@ -594,72 +596,84 @@ pin_camera_model.device = 'cuda'
 visualizer = DataVisualizer()
 gt_poses = np.loadtxt(pose_gfp)
 starttime = time.time()
-flow_from_depth_list = []
 image_list = []
 flow_list = []
 
-def build_train_dataset():
+def build_train_dataset(batch_size = 12, dataset_size = 0.5, crop_size = [1/4, 1/4], downsample_size = 8):
 
-    for ix in range(round(len(pin_depth0_gfps)/2-2)):
+    for ix in range(round(len(pin_depth0_gfps)*dataset_size-2)):
+
+        image = TartanAirImageReader().read_bgr(pin_bgr0_gfps[ix])
+        image = torch.tensor(image, device = 'cuda').float()
+
+        h, w, c = image.shape
+
+        #random cropping and token selection
+        random_crop_query_location=torch.rand(2).to('cuda') #random crop location
+        random_samples_reference_matrix=torch.rand(round(h * crop_size[0] / downsample_size) * round(w * crop_size[1] / downsample_size), 2).to('cuda') # [Crop Area, 2]
         
-        ############################
-        # START: A bunch of transformations for no good reason.
-        ############################
-        # Get the motion. And convert to xyz, rotvec. 
-        pos_quat = np.array(gt_poses[ix:ix+2, :])
-        traj_motions  = pos_quats2ses(pos_quat) # From xyz, xyzw format, to relative motion (1x6) format.
-
-        sample_motion = traj_motions[0, :]
-    
-
-        image0 = TartanAirImageReader().read_bgr(pin_bgr0_gfps[ix])
-        image0 = torch.tensor(image0, device = 'cuda').float()
-
-        # Load the depth image.
-        depth0 = TartanAirImageReader().read_depth(pin_depth0_gfps[ix])
-        depth0 = torch.tensor(depth0, device = 'cuda').float()
-
-        flow0 = TartanAirImageReader().read_flow(pin_flow_gfps[ix])
-        flow0 = torch.tensor(flow0, device = 'cuda').float()
         
-        # flow_from_depth = flow_from_depth_motion(depth0, sample_motion, pin_camera_model, device = depth0.device)
-        # flow_from_depth_list.append(flow_from_depth.to(torch.float16))
-        image_list.append(image0.to(torch.float16))
-        flow_list.append(flow0.to(torch.float16))
+        #Decompressing flow to flow and mask
+        flow16 = cv2.imread(pin_flow_gfps[ix], cv2.IMREAD_UNCHANGED)
+        flow16, mask = flow16to32(flow16)
+        flow = torch.tensor(flow16, device = 'cuda').float()
+        mask = torch.tensor(mask, device = 'cuda').float().unsqueeze(dim=-1) / 100
 
-    torch.cuda.empty_cache()
+        #Masked pixels become 0
+        masked_flow = torch.mul(flow, mask).permute(2, 0, 1)
 
-    # flow = torch.stack(flow_from_depth_list)
-    flow = torch.stack(flow_list)
 
-    print(flow.shape)
+        c_mf, h_mf, w_mf = masked_flow.shape
+        feature_flow = transforms.functional.crop(masked_flow, round(random_crop_query_location[0].item()*(h_mf-1)), 
+                                                    round(random_crop_query_location[1].item()*(w_mf-1)), 
+                                                    round(crop_size[0]*h_mf), 
+                                                    round(crop_size[1]*w_mf))
+
+        feature_flow = torch.nn.functional.avg_pool2d(masked_flow, kernel_size = downsample_size, stride = downsample_size)
+
+        image_list.append(image.to(torch.float16))
+        # flow_list.append(flow0.to(torch.float16))
+
+        torch.cuda.empty_cache()
 
     images = torch.stack(image_list)
 
     print(images.shape)
 
-    # feature_flow = torch.nn.functional.avg_pool2d(flow, 8)
-
-    # feature_correlation = torch.empty(size=())
-
-    # print(feature_flow.shape)
-
     # return images, feature_correlation
 
 # build_train_dataset()
 
-import cv2
+
 
 flow16 = cv2.imread(pin_flow_gfps[0], cv2.IMREAD_UNCHANGED)
 
 flow16, mask = flow16to32(flow16)
 
 flow = torch.tensor(flow16, device = 'cuda').float()
-mask = torch.tensor(mask, device = 'cuda').float().unsqueeze(dim=-1)
+mask = torch.tensor(mask, device = 'cuda').float().unsqueeze(dim=-1) / 100
 
-flow = torch.cat((flow, mask), dim = -1).to(flow.device).float()
 
-print(flow.shape)
+masked_flow = torch.mul(flow, mask).permute(2, 0, 1)
+print(masked_flow.shape)
 
-# print(flow[])
+random_crop_query_location=torch.rand(2).to('cuda') #random crop location
+
+c, h ,w = masked_flow.shape
+
+print(random_crop_query_location[0])
+
+feature_flow = transforms.functional.crop(masked_flow, round(random_crop_query_location[0].item()*(h-1)), 
+                                            round(random_crop_query_location[1].item()*(w-1)), 
+                                            round(1/4*h), 
+                                            round(1/4*w))
+
+feature_flow = torch.nn.functional.avg_pool2d(feature_flow, kernel_size = 8, stride = 8)
+
+print(feature_flow.shape)
+
+# image = TartanAirImageReader().read_bgr(pin_bgr0_gfps[0])
+# image = torch.tensor(image, device = 'cuda').float()
+
+# print(image.shape)
 
