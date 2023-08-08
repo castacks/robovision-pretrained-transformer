@@ -654,7 +654,7 @@ feature_map_crop_width = round(w * crop_size[1] / downsample_size)
 
 
 #Random cropping and token selection
-random_crop_query_location=torch.rand(2).to('cuda') #random crop location
+random_crop_query_location = torch.round(torch.mul(torch.rand(2), torch.tensor([feature_map_crop_width, feature_map_crop_height]))).to('cuda').to(torch.int32) #random crop location (x, y)
 random_samples_reference_matrix=torch.rand(feature_map_crop_height * feature_map_crop_width, 2).to('cuda') # [Crop Area, 2]
 
 random_samples_reference = torch.rand(feature_map_crop_height * feature_map_crop_width).to('cuda') # [Crop Area]
@@ -695,7 +695,9 @@ print(reference_x_y_coords[1, 100])
 
 correlation_positions = torch.add(selective_masked_flow, selective_masked_flow_indices)
 
+print(random_crop_query_location)
 
+# relative_correlation_positions = torch.sub(correlation_positions, random_crop_query_location)
 
 print(correlation_positions.shape)
 
