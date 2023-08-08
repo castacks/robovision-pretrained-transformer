@@ -670,15 +670,15 @@ mask = torch.tensor(mask, device = 'cuda').float().unsqueeze(dim=-1) / 100
 #Masked pixels become 0
 masked_flow = torch.mul(flow, mask).permute(2, 0, 1)
 
-feature_flow = torch.nn.functional.avg_pool2d(masked_flow, kernel_size = downsample_size, stride = downsample_size)
+feature_flow = torch.div(torch.nn.functional.avg_pool2d(masked_flow, kernel_size = downsample_size, stride = downsample_size), downsample_size)
 
 # print(feature_flow.shape)
 
 c_ff, h_ff, w_ff = feature_flow.shape
 
-flattened_feature_flow = feature_flow.view(c_ff, h_ff * w_ff)
+flattened_feature_flow = feature_flow.view(c_ff, h_ff * w_ff) #FIXME, think about scaling flow down by parameter factors
 
-# print(flattened_feature_flow.shape)
+print(flattened_feature_flow[0, :])
 
 selective_masked_flow_indices = torch.round(random_samples_reference * h_ff * w_ff).to(torch.int32)
 # print(selective_masked_flow_indices.shape)
