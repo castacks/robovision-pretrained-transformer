@@ -672,35 +672,42 @@ masked_flow = torch.mul(flow, mask).permute(2, 0, 1)
 
 feature_flow = torch.nn.functional.avg_pool2d(masked_flow, kernel_size = downsample_size, stride = downsample_size)
 
-print(feature_flow.shape)
+# print(feature_flow.shape)
 
 c_ff, h_ff, w_ff = feature_flow.shape
 
 flattened_feature_flow = feature_flow.view(c_ff, h_ff * w_ff)
 
-print(flattened_feature_flow.shape)
+# print(flattened_feature_flow.shape)
 
 selective_masked_flow_indices = torch.round(random_samples_reference * h_ff * w_ff).to(torch.int32)
-print(selective_masked_flow_indices.shape)
+# print(selective_masked_flow_indices.shape)
 
 selective_masked_flow = torch.index_select(flattened_feature_flow, 1, selective_masked_flow_indices)
 
-print(selective_masked_flow.shape)
-print(selective_masked_flow_indices.shape)
+# print(selective_masked_flow.shape)
+# print(selective_masked_flow_indices.shape)
+
+x_coords = ((selective_masked_flow_indices + 1) % feature_map_crop_width).unsqueeze(dim=-1).permute(1, 0)
+
+y_coords = torch.ceil(torch.div(selective_masked_flow_indices, feature_map_crop_width)).unsqueeze(dim=-1).permute(1, 0)
+
+print(y_coords.shape)
+print(y_coords[0, :])
 
 #Recovers x, y coordinates from 1D positions
 reference_x_y_coords =  torch.cat([(selective_masked_flow_indices % feature_map_crop_width).unsqueeze(dim=-1).permute(1, 0), (torch.ceil(selective_masked_flow_indices / feature_map_crop_width).unsqueeze(dim=-1)).permute(1, 0)]).to(torch.int32)
 
-print(reference_x_y_coords[1, 100])
+# print(reference_x_y_coords[1, 100])
 
-correlation_positions = torch.add(selective_masked_flow, selective_masked_flow_indices)
+# correlation_positions = torch.add(selective_masked_flow, reference_x_y_coords)
 
-print(random_crop_query_location.unsqueeze(-1).repeat(1, feature_map_crop_height * feature_map_crop_width).shape)
+# print(random_crop_query_location.unsqueeze(-1).repeat(1, feature_map_crop_height * feature_map_crop_width).shape)
 
-relative_correlation_positions = torch.sub(correlation_positions, random_crop_query_location.unsqueeze(-1).repeat(1, feature_map_crop_height * feature_map_crop_width))
+# relative_correlation_positions = torch.sub(correlation_positions, random_crop_query_location.unsqueeze(-1).repeat(1, feature_map_crop_height * feature_map_crop_width))
 
-print(correlation_positions.shape)
+# print(correlation_positions.shape)
 
-print(relative_correlation_positions[1, 250])
+# print(relative_correlation_positions[1, 250])
 
 
