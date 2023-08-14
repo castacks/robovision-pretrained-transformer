@@ -80,6 +80,7 @@ class UniMatch(nn.Module):
 
     def upsample_flow(self, flow, feature, bilinear=False, upsample_factor=8,
                       is_depth=False):
+       
         if bilinear:
             multiplier = 1 if is_depth else upsample_factor
             up_flow = F.interpolate(flow, scale_factor=upsample_factor,
@@ -93,6 +94,10 @@ class UniMatch(nn.Module):
         return up_flow
 
     def forward(self, img0, img1,
+                x_y_coords,
+                random_samples_reference,
+                random_crop_location,
+                feature_map_crop_shape,
                 attn_type=None,
                 attn_splits_list=None,
                 corr_radius_list=None,
@@ -206,7 +211,7 @@ class UniMatch(nn.Module):
                     elif task == 'stereo':
                         flow_pred = global_correlation_softmax_stereo(feature0, feature1)[0]
                     elif task == 'matching':
-                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1)
+                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1, x_y_coords, random_samples_reference, random_crop_location, feature_map_crop_shape)
                     else:
                         raise NotImplementedError
                 else:  # local matching
@@ -215,37 +220,44 @@ class UniMatch(nn.Module):
                     elif task == 'stereo':
                         flow_pred = local_correlation_softmax_stereo(feature0, feature1, corr_radius)[0]
                     elif task == 'matching': #FIXME
-                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1) #FIXME
+                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1, x_y_coords, random_samples_reference, random_crop_location, feature_map_crop_shape) #FIXME
                     else:
                         raise NotImplementedError
 
             # flow or residual flow
-            flow = flow + flow_pred if flow is not None else flow_pred
+
+            if(task != 'matching'):
+                flow = flow + flow_pred if flow is not None else flow_pred
 
             if task == 'stereo':
                 flow = flow.clamp(min=0)  # positive disparity
 
             # upsample to the original resolution for supervison at training time only
             if self.training:
-                flow_bilinear = self.upsample_flow(flow, None, bilinear=True, upsample_factor=upsample_factor,
-                                                   is_depth=task == 'depth')
-                flow_preds.append(flow_bilinear)
+
+                if(task != 'matching'):
+                    flow_bilinear = self.upsample_flow(flow, None, bilinear=True, upsample_factor=upsample_factor,
+                                                    is_depth=task == 'depth')
+                    flow_preds.append(flow_bilinear)
 
             # flow propagation with self-attn
+
             if (pred_bidir_flow or pred_bidir_depth) and scale_idx == 0:
                 feature0 = torch.cat((feature0, feature1), dim=0)  # [2*B, C, H, W] for propagation
 
-            flow = self.feature_flow_attn(feature0, flow.detach(),
-                                          local_window_attn=prop_radius > 0,
-                                          local_window_radius=prop_radius,
-                                          )
+            if(task != 'matching'):
+                flow = self.feature_flow_attn(feature0, flow.detach(),
+                                            local_window_attn=prop_radius > 0,
+                                            local_window_radius=prop_radius,
+                                            )
 
             # bilinear exclude the last one
             if self.training and scale_idx < self.num_scales - 1:
-                flow_up = self.upsample_flow(flow, feature0, bilinear=True,
-                                             upsample_factor=upsample_factor,
-                                             is_depth=task == 'depth')
-                flow_preds.append(flow_up)
+                if(task != 'matching'):
+                    flow_up = self.upsample_flow(flow, feature0, bilinear=True,
+                                                upsample_factor=upsample_factor,
+                                                is_depth=task == 'depth')
+                    flow_preds.append(flow_up)
 
             if scale_idx == self.num_scales - 1:
                 if not self.reg_refine:
@@ -261,21 +273,24 @@ class UniMatch(nn.Module):
                                                           is_depth=True).clamp(min=min_depth, max=max_depth)
                         flow_up = depth_up_pad[:, :1]  # [B, 1, H, W]
                     else:
-                        flow_up = self.upsample_flow(flow, feature0)
-
+                        if(task != 'matching'):
+                            flow_up = self.upsample_flow(flow, feature0)
+                if(task != 'matching'):
                     flow_preds.append(flow_up)
                 else:
                     # task-specific local regression refinement
                     # supervise current flow
                     if self.training:
-                        flow_up = self.upsample_flow(flow, feature0, bilinear=True,
-                                                     upsample_factor=upsample_factor,
-                                                     is_depth=task == 'depth')
-                        flow_preds.append(flow_up)
+                        if(task != 'matching'):
+                            flow_up = self.upsample_flow(flow, feature0, bilinear=True,
+                                                        upsample_factor=upsample_factor,
+                                                        is_depth=task == 'depth')
+                            flow_preds.append(flow_up)
 
                     assert num_reg_refine > 0
                     for refine_iter_idx in range(num_reg_refine):
-                        flow = flow.detach()
+                        if(task != 'matching'):
+                            flow = flow.detach()
 
                         if task == 'stereo':
                             zeros = torch.zeros_like(flow)  # [B, 1, H, W]
@@ -309,27 +324,29 @@ class UniMatch(nn.Module):
                             )  # [B, (2R+1)^2, H, W]
 
                         else:
-                            correlation = local_correlation_with_flow(
-                                feature0_ori,
-                                feature1_ori,
-                                flow=flow,
-                                local_radius=4,
-                            )  # [B, (2R+1)^2, H, W]
+                            if(task != 'matching'):
+                                correlation = local_correlation_with_flow(
+                                    feature0_ori,
+                                    feature1_ori,
+                                    flow=flow,
+                                    local_radius=4,
+                                )  # [B, (2R+1)^2, H, W]
 
-                        proj = self.refine_proj(feature0)
+                                proj = self.refine_proj(feature0)
 
-                        net, inp = torch.chunk(proj, chunks=2, dim=1)
+                                net, inp = torch.chunk(proj, chunks=2, dim=1)
 
-                        net = torch.tanh(net)
-                        inp = torch.relu(inp)
+                                net = torch.tanh(net)
+                                inp = torch.relu(inp)
 
-                        net, up_mask, residual_flow = self.refine(net, inp, correlation, flow.clone(),
-                                                                  )
+                                net, up_mask, residual_flow = self.refine(net, inp, correlation, flow.clone(),
+                                                                        )
 
                         if task == 'depth':
                             flow = (flow - residual_flow).clamp(min=min_depth, max=max_depth)
                         else:
-                            flow = flow + residual_flow
+                            if(task != 'matching'):
+                                flow = flow + residual_flow
 
                         if task == 'stereo':
                             flow = flow.clamp(min=0)  # positive
@@ -352,10 +369,12 @@ class UniMatch(nn.Module):
                                     flow_up = depth_up_pad[:, :1]  # [B, 1, H, W]
 
                             else:
-                                flow_up = upsample_flow_with_mask(flow, up_mask, upsample_factor=self.upsample_factor,
-                                                                  is_depth=task == 'depth')
 
-                            flow_preds.append(flow_up)
+                                if(task != 'matching'):
+                                    flow_up = upsample_flow_with_mask(flow, up_mask, upsample_factor=self.upsample_factor,
+                                                                    is_depth=task == 'depth')
+
+                                    flow_preds.append(flow_up)
 
         if task == 'stereo':
             for i in range(len(flow_preds)):

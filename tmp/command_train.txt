@@ -1,4 +1,0 @@
-/home/mihirsharma/AirLab/robovision-pretrained-transformer/main_flow.py
-
-/home/mihirsharma/AirLab/robovision-pretrained-transformer/main_flow.py
-

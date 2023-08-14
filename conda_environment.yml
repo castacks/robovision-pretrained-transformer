@@ -72,8 +72,8 @@ dependencies:
   - networkx=2.8.4
   - ninja=1.10.2
   - ninja-base=1.10.2
-  - numpy=1.19.2
-  - numpy-base=1.19.2
+  # - numpy=1.19.2
+  # - numpy-base=1.19.2
   - openh264=2.1.1
   - openssl=1.1.1s
   - packaging=21.3
@@ -107,6 +107,15 @@ dependencies:
   - zlib=1.2.13
   - zstd=1.4.9
   - pip:
+      - pandas
+      - plyfile
+      - git+https://github.com/kornia/kornia
+      - numba
+      - numpy==1.21.0
+      - colorama
+      - pytransform3d
+      - cupy-cuda102
+      # - cupy
       - absl-py==1.3.0
       - cachetools==5.2.0
       - charset-normalizer==2.1.1

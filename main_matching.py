@@ -5,8 +5,8 @@ from torch.utils.tensorboard import SummaryWriter
 import argparse
 import numpy as np
 import os
-
-from dataloader.matching.datasets import build_train_dataset
+from dataloader.matching import tartanair
+from dataloader.matching.datasets import convert_flow_batch_to_matching
 from unimatch.unimatch import UniMatch
 from loss.flow_loss import flow_loss_func
 from loss.matching_loss import matching_loss_func
@@ -48,11 +48,11 @@ def get_args_parser():
 
     # training
     parser.add_argument('--lr', default=4e-4, type=float)
-    parser.add_argument('--batch_size', default=12, type=int)
+    parser.add_argument('--batch_size', default=2, type=int)
     parser.add_argument('--num_workers', default=4, type=int)
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--grad_clip', default=1.0, type=float)
-    parser.add_argument('--num_steps', default=100000, type=int)
+    parser.add_argument('--num_steps', default=500, type=int)
     parser.add_argument('--seed', default=326, type=int)
     parser.add_argument('--summary_freq', default=100, type=int)
     parser.add_argument('--val_freq', default=10000, type=int)
@@ -373,24 +373,14 @@ def main(args):
 
         return
 
-    train_dataset = build_train_dataset() #FIXME
 
-    print('Number of training images:', len(train_dataset))
-
-    # multi-processing
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-            train_dataset,
-            num_replicas=torch.cuda.device_count(),
-            rank=args.local_rank)
-    else:
-        train_sampler = None
+    train_sampler = None
 
     shuffle = False if args.distributed else True
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,
-                                               shuffle=shuffle, num_workers=args.num_workers,
-                                               pin_memory=True, drop_last=True,
-                                               sampler=train_sampler) #FIXME
+    tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
+
+    tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = 2)
+
     
 
     last_epoch = start_step if args.resume and start_step > 0 else -1
@@ -419,17 +409,17 @@ def main(args):
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
-        for i, sample in enumerate(train_loader): #FIXME
-            img1, img2, matching_gt, valid = [x.to(device) for x in sample] #FIXME
+        for i in range(500): #FIXME
+            img1, img2, matching_gt, x_y_coords, random_samples_reference, random_crop_location, feature_map_crop_shape = convert_flow_batch_to_matching(tartan_air_dataloader.load_sample(), crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=2, device = 'cuda')
 
-            matching_preds_and_information = model(img1, img2,
+            matching_preds_and_information = model(img1, img2, x_y_coords, random_samples_reference, random_crop_location, feature_map_crop_shape,
                                  attn_type=args.attn_type,
                                  attn_splits_list=args.attn_splits_list,
                                  corr_radius_list=args.corr_radius_list,
                                  prop_radius_list=args.prop_radius_list,
                                  num_reg_refine=args.num_reg_refine,
                                  task='matching',
-                                 ) # FIXME
+                                 )
 
             matching_preds = matching_preds_and_information[0]# flow_preds = results_dict['flow_preds'] #FIXME
 
@@ -459,7 +449,7 @@ def main(args):
             if args.local_rank == 0:
                 logger.push(metrics)
 
-                logger.add_image_summary(img1, img2, matching_preds, matching_gt) #FIXME
+                # logger.add_image_summary(img1, img2, matching_preds, matching_gt) #FIXME
 
             total_steps += 1
 
