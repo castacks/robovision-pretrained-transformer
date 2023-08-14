@@ -1,0 +1,49 @@
+---
+  task: flowvo
+  dataset_frame_skip: 0
+  dataset_seq_stride: 1
+  dataset_frame_dir: true
+  data:
+    "/ocean/projects/cis220039p/wenshanw/workspace/geometry_vision/data/tartan_train.txt":
+      modality: 
+        "flow":
+          type: flow_left
+          cacher_size: [480, 640]
+          length: 1
+        "img0":
+          type: image_left
+          cacher_size: [480, 640]
+          length: 3
+        "img1":
+          type: image_right
+          cacher_size: [480, 640]
+          length: 1
+        "depth0":
+          type: depth_left
+          cacher_size: [480, 640]
+          length: 2
+        "acc":
+          type: imu_acc_v1
+          cacher_size: [3]
+          length: 20
+        "gyro":
+          type: imu_gyro_v1
+          cacher_size: [3]
+          length: 20
+        "pose":
+          type: pose_left
+          cacher_size: [7]
+          length: 1
+        "motion":
+          type: motion_left
+          cacher_size: [6]
+          length: 3
+        "seg0":
+          type: seg_left
+          cacher_size: [480, 640]
+          length: 2
+      cacher:
+        data_root_key: tartan
+        subset_framenum: 500
+        worker_num: 8
+      dataset:
