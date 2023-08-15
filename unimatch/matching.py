@@ -1,4 +1,6 @@
 import torch
+import cv2
+import numpy as np
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 from .geometry import coords_grid, generate_window_grid, normalize_coords
@@ -18,12 +20,13 @@ def selective_correlation_softmax(feature0, feature1, x_y_coords, random_samples
 
     feature1= transforms.functional.crop(feature1, top = random_crop_location[1], left = random_crop_location[0], height = feature_map_crop_shape[0], width = feature_map_crop_shape[1]).to('cuda')
 
-    feature1 = feature1.contiguous().view(b, c, feature_map_crop_shape[0] * feature_map_crop_shape[1] ).to('cuda') # [B, C, crop area]
+    feature1 = feature1.contiguous().view(b, c, feature_map_crop_shape[0] * feature_map_crop_shape[1]).to('cuda') # [B, C, crop area]
 
     # print(feature1.shape)
 
     #correlation after matrix multiplication and applying softmax
     correlation = F.softmax(torch.matmul(feature0, feature1).float(), dim=-1).view(b, feature_map_crop_shape[0] * feature_map_crop_shape[1], feature_map_crop_shape[0], feature_map_crop_shape[1]).to('cuda') # [B, crop area, crop area height, crop area width]
+    cv2.imwrite('test_images/model_output.png', (correlation[0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).repeat(1, 1, 3).to('cpu').detach().numpy().astype(np.uint8))
     return correlation
 def global_correlation_softmax(feature0, feature1,
                                pred_bidir_flow=False,
