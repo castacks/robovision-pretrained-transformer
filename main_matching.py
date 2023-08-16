@@ -410,9 +410,9 @@ def main(args):
             train_sampler.set_epoch(epoch)
 
         for i in range(round((args.batch_size - 1) / 2)): #FIXME
-            img1, img2, matching_gt, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape = convert_flow_batch_to_matching(batch_example, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=10, device = 'cuda') #tartanairdataloader.load_sample()
+            img1, img2, matching_gt, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape, samples = convert_flow_batch_to_matching(batch_example, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1, samples = 900, device = 'cuda') #tartanairdataloader.load_sample()
 
-            matching_preds = model(img1, img2, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape,
+            matching_preds = model(img1, img2, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape, samples,
                                  attn_type=args.attn_type,
                                  attn_splits_list=args.attn_splits_list,
                                  corr_radius_list=args.corr_radius_list,

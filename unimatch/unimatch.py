@@ -96,6 +96,7 @@ class UniMatch(nn.Module):
                 random_samples_reference,
                 random_crop_locations_x_y,
                 feature_map_crop_shape,
+                samples,
                 attn_type=None,
                 attn_splits_list=None,
                 corr_radius_list=None,
@@ -209,7 +210,7 @@ class UniMatch(nn.Module):
                     elif task == 'stereo':
                         flow_pred = global_correlation_softmax_stereo(feature0, feature1)[0]
                     elif task == 'matching':
-                        matching_preds = selective_correlation_softmax(feature0, feature1, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape)
+                        matching_preds = selective_correlation_softmax(feature0, feature1, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape, samples)
                     else:
                         raise NotImplementedError
                 else:  # local matching
@@ -218,7 +219,7 @@ class UniMatch(nn.Module):
                     elif task == 'stereo':
                         flow_pred = local_correlation_softmax_stereo(feature0, feature1, corr_radius)[0]
                     elif task == 'matching': #FIXME
-                        matching_preds = selective_correlation_softmax(feature0, feature1, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape) #FIXME
+                        matching_preds = selective_correlation_softmax(feature0, feature1, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape, samples) #FIXME
                     else:
                         raise NotImplementedError
 
