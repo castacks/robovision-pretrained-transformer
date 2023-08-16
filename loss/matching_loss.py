@@ -17,7 +17,7 @@ def matching_loss_func(matching_preds, matching_gt):
         '5px': (epe > 5).float().mean().item(),
     }
 
-    training_loss = loss(matching_preds, matching_gt)
+    training_loss = 1000 * loss(matching_preds, matching_gt)
 
     print(training_loss)
 
