@@ -47,8 +47,8 @@ def get_args_parser():
                         help='with speed methic when evaluation')
 
     # training
-    parser.add_argument('--lr', default=4e-4, type=float)
-    parser.add_argument('--batch_size', default=2, type=int)
+    parser.add_argument('--lr', default=4e-4, type=float) #default = 4e-4
+    parser.add_argument('--batch_size', default=4, type=int)
     parser.add_argument('--num_workers', default=4, type=int)
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--grad_clip', default=1.0, type=float)
@@ -379,8 +379,8 @@ def main(args):
     shuffle = False if args.distributed else True
     tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
 
-    tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = 2)
-
+    tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = 3)
+    batch_example = tartan_air_dataloader.load_sample()
     
 
     last_epoch = start_step if args.resume and start_step > 0 else -1
@@ -409,10 +409,10 @@ def main(args):
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
-        for i in range(500): #FIXME
-            img1, img2, matching_gt, x_y_coords, random_samples_reference, random_crop_location, feature_map_crop_shape = convert_flow_batch_to_matching(tartan_air_dataloader.load_sample(), crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=2, device = 'cuda')
+        for i in range(1): #FIXME
+            img1, img2, matching_gt, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape = convert_flow_batch_to_matching(batch_example, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1, device = 'cuda') #tartanairdataloader.load_sample()
 
-            matching_preds_and_information = model(img1, img2, x_y_coords, random_samples_reference, random_crop_location, feature_map_crop_shape,
+            matching_preds = model(img1, img2, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape,
                                  attn_type=args.attn_type,
                                  attn_splits_list=args.attn_splits_list,
                                  corr_radius_list=args.corr_radius_list,
@@ -420,8 +420,6 @@ def main(args):
                                  num_reg_refine=args.num_reg_refine,
                                  task='matching',
                                  )
-
-            matching_preds = matching_preds_and_information[0]# flow_preds = results_dict['flow_preds'] #FIXME
 
             loss, metrics = matching_loss_func(matching_preds, matching_gt) #FIXME
 

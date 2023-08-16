@@ -75,7 +75,6 @@ class UniMatch(nn.Module):
             chunks = torch.chunk(feature, 2, 0)  # tuple
             feature0.append(chunks[0])
             feature1.append(chunks[1])
-
         return feature0, feature1
 
     def upsample_flow(self, flow, feature, bilinear=False, upsample_factor=8,
@@ -94,9 +93,8 @@ class UniMatch(nn.Module):
         return up_flow
 
     def forward(self, img0, img1,
-                x_y_coords,
                 random_samples_reference,
-                random_crop_location,
+                random_crop_locations_x_y,
                 feature_map_crop_shape,
                 attn_type=None,
                 attn_splits_list=None,
@@ -211,7 +209,7 @@ class UniMatch(nn.Module):
                     elif task == 'stereo':
                         flow_pred = global_correlation_softmax_stereo(feature0, feature1)[0]
                     elif task == 'matching':
-                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1, x_y_coords, random_samples_reference, random_crop_location, feature_map_crop_shape)
+                        matching_preds = selective_correlation_softmax(feature0, feature1, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape)
                     else:
                         raise NotImplementedError
                 else:  # local matching
@@ -220,7 +218,7 @@ class UniMatch(nn.Module):
                     elif task == 'stereo':
                         flow_pred = local_correlation_softmax_stereo(feature0, feature1, corr_radius)[0]
                     elif task == 'matching': #FIXME
-                        matching_preds_and_information = selective_correlation_softmax(feature0, feature1, x_y_coords, random_samples_reference, random_crop_location, feature_map_crop_shape) #FIXME
+                        matching_preds = selective_correlation_softmax(feature0, feature1, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape) #FIXME
                     else:
                         raise NotImplementedError
 
@@ -390,4 +388,4 @@ class UniMatch(nn.Module):
         if(task != 'matching'):
             return results_dict
         else:
-            return matching_preds_and_information
+            return matching_preds

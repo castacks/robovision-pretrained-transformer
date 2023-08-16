@@ -6,7 +6,9 @@ import torch
 import torchvision
 import random
 import math
-import tartanair
+###########################################################################
+# import tartanair
+###########################################################################
 LOCAL_PI = math.pi
 
 
@@ -36,28 +38,27 @@ sys.path.append('..')
 # pin_flow_gfps = [os.path.join(pin_flow_images_dir, f) for f in os.listdir(
 #     pin_flow_images_dir) if f.endswith('.png')]
 # pin_flow_gfps.sort()
-###########################################################################
-mask_list = []
-
-tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
-tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = 4)
-
+######################################################################################################################################################
+# mask_list = []
+# tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
+# tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = 4)
+######################################################################################################################################################
 
 def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1.5, device = 'cuda'):
 
-    images_tensor = batch['rgb_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2) #[B, 3, H, W] g
-
+    images_tensor = batch['rgb_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device) #[B+1, 3, H, W] g
+    
     #Tensor sizing variables
     b, c, h, w = images_tensor.shape
-    batch_size = b
+    batch_size = b - 1
     feature_map_height = round(h / downsample_size)
     feature_map_width = round(w / downsample_size)
     feature_map_crop_height = round(h * crop_size[0] / downsample_size)
     feature_map_crop_width = round(w * crop_size[1] / downsample_size)
     
 
-    images_1_tensor = images_tensor[::2] #[B/2, 3, H, W] g
-    images_2_tensor = images_tensor[1::2] #[B/2, 3, H, W] g
+    images_1_tensor = images_tensor[:-1] #[B, 3, H, W] g
+    images_2_tensor = images_tensor[1:] #[B, 3, H, W] g
 
 
     ######################################################################################################################################################
@@ -70,7 +71,8 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     
 
     # Random token selection
-    random_samples_reference = torch.randint(high = feature_map_height * feature_map_width, size=(batch_size, feature_map_crop_height * feature_map_crop_width)).unsqueeze(dim=1).repeat(1, 2, 1).to('cuda')  # [B, 2, Crop Area] g
+    random_samples_reference_return = torch.randint(high = feature_map_height * feature_map_width, size=(batch_size, feature_map_crop_height * feature_map_crop_width)).unsqueeze(dim=1).to(device) #[B, 1, Crop Area] g
+    random_samples_reference = random_samples_reference_return.repeat(1, 2, 1) #[B, 2, Crop Area] g
 
     
     ######################################################################################################################################################
@@ -84,7 +86,7 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     ######################################################################################################################################################
 
 
-    flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to('cuda')  # [B, 2, H, W] g;
+    flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1]  # [B, 2, H, W] g;
     feature_flow = torch.div(torch.nn.functional.avg_pool2d(flow, kernel_size=downsample_size, stride=downsample_size), downsample_size)  # [B, 2, Feature H, Feature W] g
     b_ff, c_ff, h_ff, w_ff = feature_flow.shape
     flattened_feature_flow = feature_flow.contiguous().view(b_ff, c_ff, h_ff * w_ff) #[B, 2, Feature Area] g
@@ -94,10 +96,6 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     x_coords = ((random_samples_reference[:, 0, :]) % w_ff).unsqueeze(dim=-1).permute(2, 0, 1) #[1, B, Crop Area] g
     y_coords = torch.floor(torch.div(random_samples_reference[:, 0, :], w_ff)).unsqueeze(dim=-1).permute(2, 0, 1).to(torch.int16) #[1, B, Crop Area] g
     x_y_coords = torch.cat([x_coords, y_coords]).permute(1, 0, 2).to(torch.int16) #[B, 2, Crop Area] g
-    y_x_coords = torch.cat([y_coords, x_coords]).permute(1, 0, 2).to(torch.int16) #[B, 2, Crop Area] g
-
-    print(selective_flow[1, 1, 24])
-    print(feature_flow[1, 1, y_coords[0, 1, 24], x_coords[0, 1, 24]])
 
 
     correlation_positions_x_y = torch.add(selective_flow, x_y_coords).permute(0, 2, 1) #[B, Crop Area, 2] g
@@ -107,10 +105,10 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 
 
     x_meshgrid, y_meshgrid = torch.meshgrid(torch.arange(0, feature_map_width), torch.arange(0, feature_map_height)) #[Feature H, Feature W] x 2 g
-    x_meshgrid = x_meshgrid.unsqueeze(dim = 0).repeat(batch_size, 1, 1) #[B, Feature H, Feature W] g
-    y_meshgrid = y_meshgrid.unsqueeze(dim = 0).repeat(batch_size, 1, 1) #[B, Feature H, Feature W] g
-    x_meshgrid = x_meshgrid.unsqueeze(1).repeat(1, feature_map_crop_height * feature_map_crop_width, 1, 1).to('cuda') #[B, Crop Area, Feature H, Feature W] g
-    y_meshgrid = y_meshgrid.unsqueeze(1).repeat(1, feature_map_crop_height * feature_map_crop_width, 1, 1).to('cuda') #[B, Crop Area, Feature H, Feature W] g
+    x_meshgrid = x_meshgrid.to(device).unsqueeze(dim = 0).repeat(batch_size, 1, 1) #[B, Feature H, Feature W] g
+    y_meshgrid = y_meshgrid.to(device).unsqueeze(dim = 0).repeat(batch_size, 1, 1) #[B, Feature H, Feature W] g
+    x_meshgrid = x_meshgrid.unsqueeze(1).repeat(1, feature_map_crop_height * feature_map_crop_width, 1, 1) #[B, Crop Area, Feature H, Feature W] g
+    y_meshgrid = y_meshgrid.unsqueeze(1).repeat(1, feature_map_crop_height * feature_map_crop_width, 1, 1) #[B, Crop Area, Feature H, Feature W] g
 
 
     x_mc = x_meshgrid - correlation_positions_x_y[..., 0].contiguous().view(batch_size, feature_map_crop_height * feature_map_crop_width, 1, 1) #[B, Crop Area, Feature W, Feature H] g
@@ -122,7 +120,7 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     gaussian = gaussian.permute(0, 1, 3, 2) #[B, Crop Area, Feature H, Feature W] g
 
 
-    cropped_gaussian = torch.zeros(size = (batch_size, feature_map_crop_height * feature_map_crop_width, feature_map_crop_height, feature_map_crop_width)) #[B, Crop Area, Crop H, Crop W] g
+    cropped_gaussian = torch.zeros(size = (batch_size, feature_map_crop_height * feature_map_crop_width, feature_map_crop_height, feature_map_crop_width)).to(device) #[B, Crop Area, Crop H, Crop W] g
 
 
     random_crop_locations_subtract_x_y = torch.randint(high = 12, size = (batch_size, 2, feature_map_crop_height * feature_map_crop_width)).to(device) #[B, 2, Crop Area] g
@@ -146,9 +144,10 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 
 
     feature_map_crop_shape = [feature_map_crop_height, feature_map_crop_width]
-    return images_1_tensor.to('cuda'), images_2_tensor.to('cuda'), cropped_gaussian.to('cuda'), x_y_coords.to('cuda'), random_samples_reference.to('cuda'), random_crop_locations_x_y, feature_map_crop_shape
+    return images_1_tensor, images_2_tensor, cropped_gaussian, random_samples_reference_return, random_crop_locations_x_y, feature_map_crop_shape
   
 
     
-
-convert_flow_batch_to_matching(tartan_air_dataloader.load_sample(), crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1.25, device = 'cuda')
+######################################################################################################################################################
+# convert_flow_batch_to_matching(tartan_air_dataloader.load_sample(), crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1.25, device = 'cuda')
+######################################################################################################################################################
