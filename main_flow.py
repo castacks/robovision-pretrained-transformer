@@ -1,13 +1,14 @@
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-
+from dataloader.matching import tartanair
+from dataloader.flow.datasets import convert_tartanair_batch_to_flow
 import argparse
 import numpy as np
 import os
 
 from dataloader.flow.datasets import build_train_dataset
-from unimatch.unimatch import UniMatch
+from unimatch.unimatch_flow import UniMatch
 from loss.flow_loss import flow_loss_func
 
 from evaluate_flow import (validate_chairs, validate_things, validate_sintel, validate_kitti,
@@ -48,7 +49,7 @@ def get_args_parser():
 
     # training
     parser.add_argument('--lr', default=4e-4, type=float)
-    parser.add_argument('--batch_size', default=12, type=int)
+    parser.add_argument('--batch_size', default=2, type=int)
     parser.add_argument('--num_workers', default=4, type=int)
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--grad_clip', default=1.0, type=float)
@@ -373,23 +374,13 @@ def main(args):
 
         return
 
-    train_dataset = build_train_dataset(args)
-    print('Number of training images:', len(train_dataset))
-
-    # multi-processing
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-            train_dataset,
-            num_replicas=torch.cuda.device_count(),
-            rank=args.local_rank)
-    else:
-        train_sampler = None
+    train_sampler = None
 
     shuffle = False if args.distributed else True
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,
-                                               shuffle=shuffle, num_workers=args.num_workers,
-                                               pin_memory=True, drop_last=True,
-                                               sampler=train_sampler)
+    tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
+
+    tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = 3)
+    batch_example = tartan_air_dataloader.load_sample()
 
     last_epoch = start_step if args.resume and start_step > 0 else -1
     lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -417,8 +408,8 @@ def main(args):
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
-        for i, sample in enumerate(train_loader):
-            img1, img2, flow_gt, valid = [x.to(device) for x in sample]
+        for i in range(round((3 - 1) / 2)):
+            img1, img2, flow_gt, valid = convert_tartanair_batch_to_flow(batch_example, 'cuda')
 
             results_dict = model(img1, img2,
                                  attn_type=args.attn_type,
