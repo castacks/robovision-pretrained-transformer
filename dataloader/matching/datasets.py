@@ -75,19 +75,17 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     random_samples_reference = random_samples_reference_return.repeat(1, 2, 1) #[B, 2, Samples] g
 
     
-    ######################################################################################################################################################
     #TODO add mask
-    # #Mask gets set to 1 for valid and 0 for invalid
-    # mask = torch.where(mask != 0.0, 0.0, 1.0) #good
-    # print(mask[0, 500, 500, 0])
-    # cv2.imwrite('mask.png', (mask[140] * 255).to('cpu').numpy().astype(np.uint8))
-    # # Masked pixels become 0
-    # masked_flow = torch.mul(flow, mask).permute(0, 3, 1, 2)  # [Batch, 2, H(640), W(640)], seems good
-    ######################################################################################################################################################
+    #Mask gets set to 1 for valid and 0 for invalid
+    mask = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, 2, :, :].unsqueeze(dim=1) #[B, 1, 640, 640]
+    mask = torch.where(mask != 0.0, 0.0, 1.0) #good
+    cv2.imwrite('test_images/mask.png', (mask[0].permute(1, 2, 0) * 255).to('cpu').numpy().astype(np.uint8))
+    # Masked pixels become 0
 
 
-    flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1]  # [B, 2, H, W] g;
-    feature_flow = torch.div(torch.nn.functional.avg_pool2d(flow, kernel_size=downsample_size, stride=downsample_size), downsample_size)  # [B, 2, Feature H, Feature W] g
+    flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, :-1, :, :]  # [B, 2, H, W] g;
+    masked_flow = flow * mask #[B, 2, H, W]
+    feature_flow = torch.div(torch.nn.functional.avg_pool2d(masked_flow, kernel_size=downsample_size, stride=downsample_size), downsample_size)  # [B, 2, Feature H, Feature W] g
     b_ff, c_ff, h_ff, w_ff = feature_flow.shape
     flattened_feature_flow = feature_flow.contiguous().view(b_ff, c_ff, h_ff * w_ff) #[B, 2, Feature Area] g
     selective_flow = torch.gather(input=flattened_feature_flow, dim=2, index=random_samples_reference) #[B, 2, Samples] g

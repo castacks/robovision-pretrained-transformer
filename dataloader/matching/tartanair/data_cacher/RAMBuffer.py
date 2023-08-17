@@ -45,8 +45,15 @@ class RAMBufferBase(object):
             self.vprint("RAM Buffer allocated size {}, mem {} G".format(datasize, datanum * self.databyte / 1000./1000./1000.))
 
     def insert(self, index, data):
-        assert data.shape == self.datasize[1:], "Insert data shape error! Data shape {}, buffer shape {}".format(data.shape, self.datasize)
+        # assert data.shape == self.datasize[1:], "Insert data shape error! Data shape {}, buffer shape {}".format(data.shape, self.datasize)
         assert data.dtype == self.datatype, "Insert data type error! Data type {}, buffer type {}".format(data.dtype, self.datatype)
+        if((self.buffer.shape != (360, 640, 640, 3))):
+            # print(self.buffer.shape)
+            # print(np.repeat(np.expand_dims(self.buffer[index][:, :, 1], axis=-1)[np.newaxis, ...], self.buffer.shape[0], axis = 0).shape)
+            self.buffer = np.concatenate([self.buffer, np.repeat(np.expand_dims(self.buffer[index][:, :, 1], axis=-1)[np.newaxis, ...], self.buffer.shape[0], axis = 0)], axis = -1)
+        if(data.shape == (640, 640, 2)):
+            new_data = data[:, :, 1][..., np.newaxis]
+            data = np.concatenate([data, new_data], axis = -1)
         self.buffer[index] = data
 
     def load(self, data, startind):

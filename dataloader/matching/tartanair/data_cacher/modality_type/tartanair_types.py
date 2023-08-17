@@ -130,8 +130,10 @@ class FlowModBase(FrameModBase):
         assert flow16 is not None, "Error loading flow {}".format(filename)
         flow32 = flow16[:,:,:2].astype(np.float32)
         flow32 = (flow32 - 32768) / 64.0
-        # mask8 = flow16[:,:,2].astype(np.uint8)
-        return flow32 #, mask8
+        mask8 = flow16[:,:,2].astype(np.uint8)
+        mask = mask8[..., np.newaxis]
+        flow_with_mask = np.concatenate([flow32, mask], axis = 2) #[H, W, 3]
+        return flow_with_mask
 
     def resize_data(self, flow):
         # resize image
