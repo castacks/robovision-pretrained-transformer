@@ -5,7 +5,7 @@
 # number of gpus for training, please set according to your hardware
 # can be trained on 4x 16GB V100 or 2x 32GB V100 or 2x 40GB A100 gpus
 NUM_GPUS=1
-
+#/home/mihirsharma/AirLab/robovision-pretrained-transformer/scripts/gmflow_scale1_train.sh
 # chairs
 CHECKPOINT_DIR=checkpoints_flow/chairs-gmflow-scale1 && \
 mkdir -p ${CHECKPOINT_DIR} && \

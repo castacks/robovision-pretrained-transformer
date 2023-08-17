@@ -15,6 +15,19 @@ import os.path as osp
 from utils import frame_utils
 from dataloader.flow.transforms import FlowAugmentor, SparseFlowAugmentor
 
+def convert_tartanair_batch_to_flow(batch, device = 'cuda'):
+    images_tensor = batch['rgb_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device) #[B+1, 3, H, W] g
+    
+    images_1_tensor = images_tensor[:-1] #[B, 2, H, W] g
+    images_2_tensor = images_tensor[1:] #[B, 2, H, W] g
+
+    flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, :-1, :, :]  # [B, 2, H, W] g;
+
+    mask = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, 2, :, :].unsqueeze(dim=1) #[B, 1, 640, 640]
+
+    return images_1_tensor, images_2_tensor, flow, mask
+
+
 
 class FlowDataset(data.Dataset):
     def __init__(self, aug_params=None, sparse=False,
