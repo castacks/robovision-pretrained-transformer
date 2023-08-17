@@ -379,7 +379,7 @@ def main(args):
     shuffle = False if args.distributed else True
     tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
 
-    tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = 3)
+    tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = args.batch_size)
     batch_example = tartan_air_dataloader.load_sample()
 
     last_epoch = start_step if args.resume and start_step > 0 else -1
@@ -408,7 +408,7 @@ def main(args):
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
-        for i in range(round((3 - 1) / 2)):
+        for i in range(round((args.batch_size - 1) / 2)):
             img1, img2, flow_gt, valid = convert_tartanair_batch_to_flow(batch_example, 'cuda')
 
             results_dict = model(img1, img2,
