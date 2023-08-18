@@ -111,12 +111,12 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     y_meshgrid = y_meshgrid.unsqueeze(1).repeat(1, samples, 1, 1) #[B, Samples, Feature H, Feature W] g
 
 
-    x_mc = x_meshgrid - correlation_positions_x_y[..., 0].view(batch_size, samples, 1, 1) #[B, Samples, Feature W, Feature H] g
-    y_mc = y_meshgrid - correlation_positions_x_y[..., 1].view(batch_size, samples, 1, 1) #[B, Samples, Feature W, Feature H] g
+    x_mc = x_meshgrid - correlation_positions_x_y[..., 0].view(batch_size, samples, 1, 1) #[B, Samples, Feature H, Feature W] g
+    y_mc = y_meshgrid - correlation_positions_x_y[..., 1].view(batch_size, samples, 1, 1) #[B, Samples, Feature H, Feature W] g
    
 
-    squared_distance = x_mc ** 2 + y_mc ** 2 #[B, Samples, Feature W, Feature H] g
-    gaussian = torch.exp((-1 * squared_distance) / (standard_deviation ** 2)) #[B, Samples, Feature W, Feature H] g
+    squared_distance = x_mc ** 2 + y_mc ** 2 #[B, Samples, Feature H, Feature W] g
+    gaussian = torch.exp((-1 * squared_distance) / (standard_deviation ** 2)) #[B, Samples, Feature H, Feature W] g
     # gaussian = gaussian.permute(0, 1, 3, 2) #[B, Samples, Feature H, Feature W] g
 
 
