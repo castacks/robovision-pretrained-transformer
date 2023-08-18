@@ -128,7 +128,7 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     random_crop_locations_x_y = torch.where(random_crop_locations_x_y > feature_map_width-1, feature_map_width-1, random_crop_locations_x_y) #[B, 2, Samples] g
     random_crop_locations_x_y = torch.where(random_crop_locations_x_y < 0, 0, random_crop_locations_x_y) #[B, 2, Samples] g
 
-    parallelization_list = [cropped_gaussian, gaussian, random_crop_locations_x_y, feature_map_crop_height, feature_map_crop_width]
+    # parallelization_list = [cropped_gaussian, gaussian, random_crop_locations_x_y, feature_map_crop_height, feature_map_crop_width]
 
     for i in range(gaussian.shape[0]):
         for j in range(gaussian.shape[1]):
