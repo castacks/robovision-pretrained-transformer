@@ -82,19 +82,20 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     mask = torch.where(mask != 0.0, 0.0, 1.0) #good
     # cv2.imwrite('test_images/mask.png', (mask[0].permute(1, 2, 0) * 255).to('cpu').numpy().astype(np.uint8))
 
-
+    #TODO CHECK FLOW IS WITH RESPECT TO FIRST IMAGE
     flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, :-1, :, :]  # [B, 2, H, W] g;
     masked_flow = flow * mask #[B, 2, H, W]
+    #FIXME feature flow averaging
     feature_flow = torch.div(torch.nn.functional.avg_pool2d(masked_flow, kernel_size=downsample_size, stride=downsample_size), downsample_size)  # [B, 2, Feature H, Feature W] g
     b_ff, c_ff, h_ff, w_ff = feature_flow.shape
     flattened_feature_flow = feature_flow.contiguous().view(b_ff, c_ff, h_ff * w_ff) #[B, 2, Feature Area] g
     selective_flow = torch.gather(input=flattened_feature_flow, dim=2, index=random_samples_reference) #[B, 2, Samples] g
 
 
-    x_coords = ((random_samples_reference[:, 0, :]) % w_ff).unsqueeze(dim=-1).permute(2, 0, 1) #[1, B, Samples] g
-    y_coords = torch.floor(torch.div(random_samples_reference[:, 0, :], w_ff)).unsqueeze(dim=-1).permute(2, 0, 1).to(torch.int16) #[1, B, Samples] g
-    x_y_coords = torch.cat([x_coords, y_coords]).permute(1, 0, 2).to(torch.int16) #[B, 2, Samples] g
-
+    x_coords = ((random_samples_reference[:, 0, :]) % w_ff).unsqueeze(dim = -1).permute(2, 0, 1) #[1, B, Samples] g
+    y_coords = torch.floor(torch.div(random_samples_reference[:, 0, :], w_ff)).unsqueeze(dim = -1).permute(2, 0, 1).to(torch.int32) #[1, B, Samples] g
+    x_y_coords = torch.cat([x_coords, y_coords]).permute(1, 0, 2).contiguous() #[B, 2, Samples] g
+#######################
 
     correlation_positions_x_y = torch.add(selective_flow, x_y_coords).permute(0, 2, 1) #[B, Samples, 2] g
 
@@ -142,10 +143,16 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 
 
     feature_map_crop_shape = [feature_map_crop_height, feature_map_crop_width]
-    return images_1_tensor, images_2_tensor, cropped_gaussian, random_samples_reference_return, random_crop_locations_x_y, feature_map_crop_shape, samples
+    return_dictonary = dict(image_1 = images_1_tensor, image_2 = images_2_tensor, matching_gt = cropped_gaussian, sample_locations = random_samples_reference_return, crop_location = random_crop_locations_x_y, crop_shape = feature_map_crop_shape, num_samples = samples)
+    return return_dictonary
   
 
     
 ######################################################################################################################################################
 # convert_flow_batch_to_matching(tartan_air_dataloader.load_sample(), crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1.25, device = 'cuda')
 ######################################################################################################################################################
+
+# def parallelize_gaussian_batch(gaussian):
+
+
+# def parallelize_gaussian_samples(gaussian):

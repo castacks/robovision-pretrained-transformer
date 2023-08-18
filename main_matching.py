@@ -49,7 +49,7 @@ def get_args_parser():
     # training
     parser.add_argument('--lr', default=4e-4, type=float) #default = 4e-4
     parser.add_argument('--batch_size', default=3, type=int)
-    parser.add_argument('--num_workers', default=4, type=int)
+    parser.add_argument('--num_workers', default=4, type=int) #default = 4
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--grad_clip', default=1.0, type=float)
     parser.add_argument('--num_steps', default=1000, type=int)
@@ -410,10 +410,11 @@ def main(args):
             train_sampler.set_epoch(epoch)
 
         for i in range(1): #FIXME
-            img1, img2, matching_gt, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape, samples = convert_flow_batch_to_matching(
+            batch_dictionary = convert_flow_batch_to_matching(
                 batch_example, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1, samples = 800, device = 'cuda') #tartanairdataloader.load_sample()
 
-            matching_preds = model(img1, img2, random_samples_reference, random_crop_locations_x_y, feature_map_crop_shape, samples,
+            matching_preds = model(batch_dictionary['image1'], batch_dictionary['image2'], batch_dictionary['sample_locations'], batch_dictionary['crop_location'], 
+                                   batch_dictionary['crop_shape'], batch_dictionary['num_samples'],
                                  attn_type=args.attn_type,
                                  attn_splits_list=args.attn_splits_list,
                                  corr_radius_list=args.corr_radius_list,
@@ -422,7 +423,7 @@ def main(args):
                                  task='matching',
                                  )
 
-            loss, metrics = matching_loss_func(matching_preds, matching_gt) #FIXME
+            loss, metrics = matching_loss_func(matching_preds, batch_dictionary['matching_gt']) 
 
             if isinstance(loss, float):
                 continue
