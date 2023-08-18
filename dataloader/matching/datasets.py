@@ -2,6 +2,7 @@ import sys
 import os
 import cv2
 import numpy as np
+import torch.jit as jit
 import torch
 import torchvision
 import random
@@ -95,7 +96,7 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     x_coords = ((random_samples_reference[:, 0, :]) % w_ff).unsqueeze(dim = -1).permute(2, 0, 1) #[1, B, Samples] g
     y_coords = torch.floor(torch.div(random_samples_reference[:, 0, :], w_ff)).unsqueeze(dim = -1).permute(2, 0, 1).to(torch.int32) #[1, B, Samples] g
     x_y_coords = torch.cat([x_coords, y_coords]).permute(1, 0, 2).contiguous() #[B, 2, Samples] g
-#######################
+
 
     correlation_positions_x_y = torch.add(selective_flow, x_y_coords).permute(0, 2, 1) #[B, Samples, 2] g
 
@@ -152,7 +153,22 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 # convert_flow_batch_to_matching(tartan_air_dataloader.load_sample(), crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1.25, device = 'cuda')
 ######################################################################################################################################################
 
-# def parallelize_gaussian_batch(gaussian):
 
+#FIXME
+@torch.jit.script
+def parallelize_gaussian_batch(gaussian):
+    batch_parallel_task_list = []
+    for i in range (gaussian.shape[0]):
+        i = 0
 
-# def parallelize_gaussian_samples(gaussian):
+@torch.jit.script
+def parallelize_gaussian_samples(index, gaussian):
+    samples_parallel_task_list = []
+    for i in range(gaussian.shape[1]):
+        samples_parallel_task_list.append(jit.fork())
+
+def set_cropped_gaussian(cropped_gaussian, gaussian, batch_index, samples_index, random_crop_locations_x_y, feature_map_crop_height, feature_map_crop_width):
+    cropped_gaussian[batch_index, samples_index] = torchvision.transforms.functional.crop(
+        img = gaussian[batch_index, samples_index], top = random_crop_locations_x_y[batch_index, 1, samples_index].to('cpu').numpy(), 
+        left = random_crop_locations_x_y[batch_index, 0, samples_index].to('cpu').numpy(), height = feature_map_crop_height, width = feature_map_crop_width)
+    return cropped_gaussian
