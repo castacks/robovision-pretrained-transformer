@@ -53,7 +53,7 @@ def get_args_parser():
     parser.add_argument('--num_workers', default=4, type=int)
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--grad_clip', default=1.0, type=float)
-    parser.add_argument('--num_steps', default=100000, type=int)
+    parser.add_argument('--num_steps', default=500, type=int)
     parser.add_argument('--seed', default=326, type=int)
     parser.add_argument('--summary_freq', default=100, type=int)
     parser.add_argument('--val_freq', default=10000, type=int)
@@ -409,7 +409,7 @@ def main(args):
             train_sampler.set_epoch(epoch)
 
         for i in range(1):
-            img1, img2, flow_gt, valid = convert_tartanair_batch_to_flow(batch_example, 'cuda')
+            img1, img2, flow_gt, valid = convert_tartanair_batch_to_flow(batch_example, 'cuda') #TODO make sure valid mask is correct
 
             results_dict = model(img1, img2,
                                  attn_type=args.attn_type,
