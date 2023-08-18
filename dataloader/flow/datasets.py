@@ -23,7 +23,9 @@ def convert_tartanair_batch_to_flow(batch, device = 'cuda'):
 
     flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, :-1, :, :]  # [B, 2, H, W] g;
 
-    mask = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, 2, :, :].unsqueeze(dim=1) #[B, 1, 640, 640]
+    mask = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, 2, :, :] #[B, 640, 640]
+
+    mask = torch.where(mask != 0.0, 0.0, 1.0)
 
     return images_1_tensor, images_2_tensor, flow, mask
 

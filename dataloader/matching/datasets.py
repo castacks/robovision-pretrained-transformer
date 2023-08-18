@@ -57,8 +57,8 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     feature_map_crop_width = round(w * crop_size[1] / downsample_size)
     
 
-    images_1_tensor = images_tensor[:-1] #[B, 2, H, W] g
-    images_2_tensor = images_tensor[1:] #[B, 2, H, W] g
+    images_1_tensor = images_tensor[:-1] #[B, 3, H, W] g
+    images_2_tensor = images_tensor[1:] #[B, 3, H, W] g
 
 
     ######################################################################################################################################################
