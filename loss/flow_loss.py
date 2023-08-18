@@ -32,5 +32,6 @@ def flow_loss_func(flow_preds, flow_gt, valid,
         '3px': (epe > 3).float().mean().item(),
         '5px': (epe > 5).float().mean().item(),
     }
+    print(flow_loss)
 
     return flow_loss, metrics

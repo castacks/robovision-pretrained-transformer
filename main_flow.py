@@ -408,7 +408,7 @@ def main(args):
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
-        for i in range(round((args.batch_size - 1) / 2)):
+        for i in range(1):
             img1, img2, flow_gt, valid = convert_tartanair_batch_to_flow(batch_example, 'cuda')
 
             results_dict = model(img1, img2,

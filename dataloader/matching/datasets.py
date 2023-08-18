@@ -75,12 +75,12 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     random_samples_reference = random_samples_reference_return.repeat(1, 2, 1) #[B, 2, Samples] g
 
     
-    #TODO add mask
+    # add mask
     #Mask gets set to 1 for valid and 0 for invalid
     mask = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, 2, :, :].unsqueeze(dim=1) #[B, 1, 640, 640]
-    mask = torch.where(mask != 0.0, 0.0, 1.0) #good
-    cv2.imwrite('test_images/mask.png', (mask[0].permute(1, 2, 0) * 255).to('cpu').numpy().astype(np.uint8))
     # Masked pixels become 0
+    mask = torch.where(mask != 0.0, 0.0, 1.0) #good
+    # cv2.imwrite('test_images/mask.png', (mask[0].permute(1, 2, 0) * 255).to('cpu').numpy().astype(np.uint8))
 
 
     flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, :-1, :, :]  # [B, 2, H, W] g;
