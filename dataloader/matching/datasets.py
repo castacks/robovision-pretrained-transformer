@@ -95,29 +95,29 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 
     x_coords = ((random_samples_reference[:, 0, :]) % w_ff).unsqueeze(dim = -1).permute(2, 0, 1) #[1, B, Samples] g
     y_coords = torch.floor(torch.div(random_samples_reference[:, 0, :], w_ff)).unsqueeze(dim = -1).permute(2, 0, 1).to(torch.int32) #[1, B, Samples] g
-    x_y_coords = torch.cat([x_coords, y_coords]).permute(1, 0, 2).contiguous() #[B, 2, Samples] g
+    x_y_coords = torch.cat([x_coords, y_coords]).permute(1, 0, 2) #[B, 2, Samples] g
 
 
-    correlation_positions_x_y = torch.add(selective_flow, x_y_coords).permute(0, 2, 1) #[B, Samples, 2] g
+    correlation_positions_x_y = torch.add(selective_flow, x_y_coords).permute(0, 2, 1).contiguous() #[B, Samples, 2] g
 
 
     batch_size, correlation_samples, correlation_dimensions = correlation_positions_x_y.shape
 
 
-    x_meshgrid, y_meshgrid = torch.meshgrid(torch.arange(0, feature_map_width), torch.arange(0, feature_map_height)) #[Feature H, Feature W] x 2 g
+    y_meshgrid, x_meshgrid = torch.meshgrid(torch.arange(0, feature_map_width), torch.arange(0, feature_map_height)) #[Feature H, Feature W] x 2 g
     x_meshgrid = x_meshgrid.to(device).unsqueeze(dim = 0).repeat(batch_size, 1, 1) #[B, Feature H, Feature W] g
     y_meshgrid = y_meshgrid.to(device).unsqueeze(dim = 0).repeat(batch_size, 1, 1) #[B, Feature H, Feature W] g
     x_meshgrid = x_meshgrid.unsqueeze(1).repeat(1, samples, 1, 1) #[B, Samples, Feature H, Feature W] g
     y_meshgrid = y_meshgrid.unsqueeze(1).repeat(1, samples, 1, 1) #[B, Samples, Feature H, Feature W] g
 
 
-    x_mc = x_meshgrid - correlation_positions_x_y[..., 0].contiguous().view(batch_size, samples, 1, 1) #[B, Samples, Feature W, Feature H] g
-    y_mc = y_meshgrid - correlation_positions_x_y[..., 1].contiguous().view(batch_size, samples, 1, 1) #[B, Samples, Feature W, Feature H] g
+    x_mc = x_meshgrid - correlation_positions_x_y[..., 0].view(batch_size, samples, 1, 1) #[B, Samples, Feature W, Feature H] g
+    y_mc = y_meshgrid - correlation_positions_x_y[..., 1].view(batch_size, samples, 1, 1) #[B, Samples, Feature W, Feature H] g
    
 
     squared_distance = x_mc ** 2 + y_mc ** 2 #[B, Samples, Feature W, Feature H] g
     gaussian = torch.exp((-1 * squared_distance) / (standard_deviation ** 2)) #[B, Samples, Feature W, Feature H] g
-    gaussian = gaussian.permute(0, 1, 3, 2) #[B, Samples, Feature H, Feature W] g
+    # gaussian = gaussian.permute(0, 1, 3, 2) #[B, Samples, Feature H, Feature W] g
 
 
     cropped_gaussian = torch.zeros(size = (batch_size, samples, feature_map_crop_height, feature_map_crop_width)).to(device) #[B, Samples, Crop H, Crop W] g
@@ -128,7 +128,7 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     random_crop_locations_x_y = torch.where(random_crop_locations_x_y > feature_map_width-1, feature_map_width-1, random_crop_locations_x_y) #[B, 2, Samples] g
     random_crop_locations_x_y = torch.where(random_crop_locations_x_y < 0, 0, random_crop_locations_x_y) #[B, 2, Samples] g
 
-    
+    parallelization_list = [cropped_gaussian, gaussian, random_crop_locations_x_y, feature_map_crop_height, feature_map_crop_width]
 
     for i in range(gaussian.shape[0]):
         for j in range(gaussian.shape[1]):
@@ -144,7 +144,7 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 
 
     feature_map_crop_shape = [feature_map_crop_height, feature_map_crop_width]
-    return_dictonary = dict(image_1 = images_1_tensor, image_2 = images_2_tensor, matching_gt = cropped_gaussian, sample_locations = random_samples_reference_return, crop_location = random_crop_locations_x_y, crop_shape = feature_map_crop_shape, num_samples = samples)
+    return_dictonary = dict(image1 = images_1_tensor, image2 = images_2_tensor, matching_gt = cropped_gaussian, sample_locations = random_samples_reference_return, crop_location = random_crop_locations_x_y, crop_shape = feature_map_crop_shape, num_samples = samples)
     return return_dictonary
   
 
@@ -154,21 +154,21 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 ######################################################################################################################################################
 
 
-#FIXME
-@torch.jit.script
-def parallelize_gaussian_batch(gaussian):
-    batch_parallel_task_list = []
-    for i in range (gaussian.shape[0]):
-        i = 0
+# #FIXME
+# @torch.jit.script
+# def parallelize_gaussian_batch(parallelization_list):
+#     batch_parallel_task_list = []
+#     for i in range (parallelization_list[1].shape[0]): #gaussian
+#         batch_parallel_task_list.append(jit.fork(parallelize_gaussian_samples()))
 
-@torch.jit.script
-def parallelize_gaussian_samples(index, gaussian):
-    samples_parallel_task_list = []
-    for i in range(gaussian.shape[1]):
-        samples_parallel_task_list.append(jit.fork())
+# @torch.jit.script
+# def parallelize_gaussian_samples(batch_index, parallelization_list):
+#     samples_parallel_task_list = []
+#     for i in range(parallelization_list[1].shape[1]): #gaussian
+#         samples_parallel_task_list.append(jit.fork(set_cropped_gaussian))
 
-def set_cropped_gaussian(cropped_gaussian, gaussian, batch_index, samples_index, random_crop_locations_x_y, feature_map_crop_height, feature_map_crop_width):
-    cropped_gaussian[batch_index, samples_index] = torchvision.transforms.functional.crop(
-        img = gaussian[batch_index, samples_index], top = random_crop_locations_x_y[batch_index, 1, samples_index].to('cpu').numpy(), 
-        left = random_crop_locations_x_y[batch_index, 0, samples_index].to('cpu').numpy(), height = feature_map_crop_height, width = feature_map_crop_width)
-    return cropped_gaussian
+# def set_cropped_gaussian(cropped_gaussian, gaussian, batch_index, samples_index, random_crop_locations_x_y, feature_map_crop_height, feature_map_crop_width):
+#     cropped_gaussian[batch_index, samples_index] = torchvision.transforms.functional.crop(
+#         img = gaussian[batch_index, samples_index], top = random_crop_locations_x_y[batch_index, 1, samples_index].to('cpu').numpy(), 
+#         left = random_crop_locations_x_y[batch_index, 0, samples_index].to('cpu').numpy(), height = feature_map_crop_height, width = feature_map_crop_width)
+#     return cropped_gaussian
