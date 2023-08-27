@@ -144,7 +144,7 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 
 
     feature_map_crop_shape = [feature_map_crop_height, feature_map_crop_width]
-    return_dictonary = dict(image1 = images_1_tensor, image2 = images_2_tensor, matching_gt = cropped_gaussian, sample_locations = random_samples_reference_return, crop_location = random_crop_locations_x_y, crop_shape = feature_map_crop_shape, num_samples = samples)
+    return_dictonary = dict(img0 = images_1_tensor, img1 = images_2_tensor, matching_gt = cropped_gaussian, sample_locations = random_samples_reference_return, crop_location = random_crop_locations_x_y, crop_shape = feature_map_crop_shape, num_samples = samples)
     return return_dictonary
   
 

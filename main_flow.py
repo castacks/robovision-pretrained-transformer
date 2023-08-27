@@ -409,9 +409,9 @@ def main(args):
             train_sampler.set_epoch(epoch)
 
         for i in range(1):
-            img1, img2, flow_gt, valid = convert_tartanair_batch_to_flow(batch_example, 'cuda') #TODO make sure valid mask is correct
+            img0, img1, flow_gt, valid = convert_tartanair_batch_to_flow(batch_example, 'cuda') #TODO make sure valid mask is correct
 
-            results_dict = model(img1, img2,
+            results_dict = model(img0, img1,
                                  attn_type=args.attn_type,
                                  attn_splits_list=args.attn_splits_list,
                                  corr_radius_list=args.corr_radius_list,
