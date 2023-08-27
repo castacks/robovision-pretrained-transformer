@@ -19,7 +19,7 @@ def selective_correlation_softmax(feature0, feature1, random_samples_reference, 
         for j in range(samples):
             cropped_feature1[i, j] = transforms.functional.crop(img = feature1[i], top = random_crop_locations_x_y[i, 1, j].to('cpu').numpy(), left = random_crop_locations_x_y[i, 0, j].to('cpu').numpy(), height = feature_map_crop_shape[0], width = feature_map_crop_shape[1])
 
-    cropped_feature1 = cropped_feature1.contiguous().view(b, samples, c, feature_map_crop_shape[0] * feature_map_crop_shape[1]).permute(2, 3, 0, 1).view(c, feature_map_crop_shape[0] * feature_map_crop_shape[1], b * samples).permute(2, 0, 1).to('cuda') # [B * Samples, C, Crop Area] g
+    cropped_feature1 = cropped_feature1.contiguous().view(b * samples, c, feature_map_crop_shape[0] * feature_map_crop_shape[1]).to('cuda') # [B * Samples, C, Crop Area] g
     
     #correlation after matrix multiplication and applying softmax
     correlation = F.softmax(

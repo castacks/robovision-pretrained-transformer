@@ -411,7 +411,7 @@ def main(args):
 
         for i in range(1): #FIXME
             batch_dictionary = convert_flow_batch_to_matching(
-                batch_example, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1, samples = 800, device = 'cuda') #tartanairdataloader.load_sample()
+                batch_example, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1, samples = 400, device = 'cuda') #tartanairdataloader.load_sample()
 
             matching_preds = model(batch_dictionary['image1'], batch_dictionary['image2'], batch_dictionary['sample_locations'], batch_dictionary['crop_location'], 
                                    batch_dictionary['crop_shape'], batch_dictionary['num_samples'],
