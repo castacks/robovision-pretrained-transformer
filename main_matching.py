@@ -1,21 +1,21 @@
 import torch
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 import argparse
 import numpy as np
 import os
+import wandb
 from dataloader.matching import tartanair
 from dataloader.matching.datasets import convert_flow_batch_to_matching
 from unimatch.unimatch import UniMatch
 from loss.flow_loss import flow_loss_func
+import cv2
 from loss.matching_loss import matching_loss_func
 from evaluate_flow import (validate_chairs, validate_things, validate_sintel, validate_kitti,
                            create_kitti_submission, create_sintel_submission,
                            inference_flow,
                            )
 
-from utils.logger import Logger
 from utils import misc
 from utils.dist_utils import get_dist_info, init_dist, setup_for_distributed
 
@@ -47,17 +47,17 @@ def get_args_parser():
                         help='with speed methic when evaluation')
 
     # training
-    parser.add_argument('--lr', default=4e-4, type=float) #default = 4e-4
+    parser.add_argument('--lr', default=4e-4, type=float)  # default = 4e-4
     parser.add_argument('--batch_size', default=3, type=int)
-    parser.add_argument('--num_workers', default=4, type=int) #default = 4
+    parser.add_argument('--num_workers', default=4, type=int)  # default = 4
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--grad_clip', default=1.0, type=float)
     parser.add_argument('--num_steps', default=1000, type=int)
     parser.add_argument('--seed', default=326, type=int)
     parser.add_argument('--summary_freq', default=100, type=int)
     parser.add_argument('--val_freq', default=10000, type=int)
-    parser.add_argument('--save_ckpt_freq', default=10000, type=int)
-    parser.add_argument('--save_latest_ckpt_freq', default=1000, type=int)
+    parser.add_argument('--save_ckpt_freq', default=500, type=int)
+    parser.add_argument('--save_latest_ckpt_freq', default=500, type=int)
 
     # resume pretrained model or resume training
     parser.add_argument('--resume', default=None, type=str,
@@ -145,10 +145,10 @@ def main(args):
 
     misc.check_path(args.output_path)
 
-    seed = args.seed
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(args.seed)
-    np.random.seed(seed)
+    # seed = args.seed
+    # torch.manual_seed(seed)
+    # torch.cuda.manual_seed(args.seed)
+    # np.random.seed(seed)
 
     torch.backends.cudnn.benchmark = True
 
@@ -373,15 +373,28 @@ def main(args):
 
         return
 
-
     train_sampler = None
 
     shuffle = False if args.distributed else True
     tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
 
-    tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = args.batch_size)
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="matching-project",
+
+        # track hyperparameters and run metadata
+        config={
+            "learning_rate": args.lr,
+            "architecture": "Transformer",
+            "dataset": "TartanAir",
+            "epochs": args.num_steps,
+        }
+    )
+
+    tartan_air_dataloader = tartanair.dataloader(env='AbandonedFactoryExposure', difficulty='easy',
+                                                 trajectory_id=['P000'], modality=['image', 'flow'],
+                                                 camera_name='lcam_front', batch_size=args.batch_size)
     batch_example = tartan_air_dataloader.load_sample()
-    
 
     last_epoch = start_step if args.resume and start_step > 0 else -1
     lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -393,11 +406,6 @@ def main(args):
         last_epoch=last_epoch,
     )
 
-    if args.local_rank == 0:
-        summary_writer = SummaryWriter(args.checkpoint_dir)
-        logger = Logger(lr_scheduler, summary_writer, args.summary_freq,
-                        start_step=start_step)
-
     total_steps = start_step
     epoch = start_epoch
     print('Start training')
@@ -405,25 +413,47 @@ def main(args):
     while total_steps < args.num_steps:
         model.train()
 
-        # mannually change random seed for shuffling every epoch
+        # manually change random seed for shuffling every epoch
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
-        for i in range(1): #FIXME
+        for i in range(1):  # FIXME
             batch_dictionary = convert_flow_batch_to_matching(
-                batch_example, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1, samples = 400, device = 'cuda') #tartanairdataloader.load_sample()
+                batch_example, crop_size=[1 / 4, 1 / 4], downsample_size=8, standard_deviation=1, samples=400,
+                device='cuda')  # tartanairdataloader.load_sample()
 
-            matching_preds = model(batch_dictionary['img0'], batch_dictionary['img1'], batch_dictionary['sample_locations'], batch_dictionary['crop_location'], 
+            matching_preds = model(batch_dictionary['img0'], batch_dictionary['img1'],
+                                   batch_dictionary['sample_locations'], batch_dictionary['crop_location'],
                                    batch_dictionary['crop_shape'], batch_dictionary['num_samples'],
-                                 attn_type=args.attn_type,
-                                 attn_splits_list=args.attn_splits_list,
-                                 corr_radius_list=args.corr_radius_list,
-                                 prop_radius_list=args.prop_radius_list,
-                                 num_reg_refine=args.num_reg_refine,
-                                 task='matching',
-                                 )
+                                   attn_type=args.attn_type,
+                                   attn_splits_list=args.attn_splits_list,
+                                   corr_radius_list=args.corr_radius_list,
+                                   prop_radius_list=args.prop_radius_list,
+                                   num_reg_refine=args.num_reg_refine,
+                                   task='matching',
+                                   )
 
-            loss, metrics = matching_loss_func(matching_preds, batch_dictionary['matching_gt']) 
+            loss, metrics = matching_loss_func(matching_preds, batch_dictionary['matching_gt'])
+
+            if ((total_steps % 50) == 0):
+                model_output = (matching_preds[0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).to(
+                                'cpu').detach().numpy().astype(np.uint8)
+                ground_truth = (batch_dictionary['matching_gt'][0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).to(
+                                'cpu').detach().numpy().astype(np.uint8)
+                # cv2.imwrite('test_images/model_output_step_' + (total_steps / 50) + '.png',
+                #             model_output)
+                # cv2.imwrite('test_images/ground_truth_step_' + (total_steps / 50) + '.png',
+                #            ground_truth)
+                output_image = wandb.Image(
+                    model_output,
+                    caption="Model Output %d" % total_steps
+                )
+                gt_image = wandb.Image(
+                    ground_truth,
+                    caption="Ground Truth %d" % total_steps
+                )
+                wandb.log({"Model Images ": output_image, "Ground Truth Images ": gt_image})
+            wandb.log({"Loss": loss})
 
             if isinstance(loss, float):
                 continue
@@ -446,11 +476,6 @@ def main(args):
 
             lr_scheduler.step()
 
-            if args.local_rank == 0:
-                logger.push(metrics)
-
-                # logger.add_image_summary(img1, img2, matching_preds, matching_gt) #FIXME
-
             total_steps += 1
 
             if total_steps % args.save_ckpt_freq == 0 or total_steps == args.num_steps:
@@ -460,6 +485,8 @@ def main(args):
                     torch.save({
                         'model': model_without_ddp.state_dict()
                     }, checkpoint_path)
+                    wandb.save('./tmp/step*')
+                    
 
             if total_steps % args.save_latest_ckpt_freq == 0:
                 checkpoint_path = os.path.join(args.checkpoint_dir, 'checkpoint_latest.pth')
@@ -471,10 +498,10 @@ def main(args):
                         'step': total_steps,
                         'epoch': epoch,
                     }, checkpoint_path)
+                    wandb.save('./tmp/checkpoint*')
 
             if total_steps % args.val_freq == 0:
                 print('Start validation')
-
                 val_results = {}
                 # support validation on multiple datasets
                 if 'chairs' in args.val_dataset:
@@ -531,8 +558,6 @@ def main(args):
                         val_results.update(results_dict)
 
                 if args.local_rank == 0:
-
-                    logger.write_dict(val_results)
 
                     val_file = os.path.join(args.checkpoint_dir, 'val_results.txt')
                     with open(val_file, 'a') as f:

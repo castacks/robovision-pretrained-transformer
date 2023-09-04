@@ -9,6 +9,7 @@ import os
 
 from dataloader.flow.datasets import build_train_dataset
 from unimatch.unimatch_flow import UniMatch
+import wandb
 from loss.flow_loss import flow_loss_func
 
 from evaluate_flow import (validate_chairs, validate_things, validate_sintel, validate_kitti,
@@ -53,7 +54,7 @@ def get_args_parser():
     parser.add_argument('--num_workers', default=4, type=int)
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--grad_clip', default=1.0, type=float)
-    parser.add_argument('--num_steps', default=500, type=int)
+    parser.add_argument('--num_steps', default=1000, type=int)
     parser.add_argument('--seed', default=326, type=int)
     parser.add_argument('--summary_freq', default=100, type=int)
     parser.add_argument('--val_freq', default=10000, type=int)
@@ -401,6 +402,19 @@ def main(args):
     epoch = start_epoch
     print('Start training')
 
+    wandb.init(
+    # set the wandb project where this run will be logged
+    project="flow-project",
+    
+    # track hyperparameters and run metadata
+    config={
+    "learning_rate": args.lr,
+    "architecture": "Transformer",
+    "dataset": "TartanAir",
+    "epochs": args.num_steps,
+    }
+    )
+
     while total_steps < args.num_steps:
         model.train()
 
@@ -427,6 +441,8 @@ def main(args):
                                            max_flow=args.max_flow,
                                            )
 
+            wandb.log({"loss": loss})
+
             if isinstance(loss, float):
                 continue
 
@@ -451,7 +467,7 @@ def main(args):
             if args.local_rank == 0:
                 logger.push(metrics)
 
-                logger.add_image_summary(img1, img2, flow_preds, flow_gt)
+                logger.add_image_summary(img0, img1, flow_preds, flow_gt)
 
             total_steps += 1
 
