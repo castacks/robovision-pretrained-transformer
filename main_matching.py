@@ -6,6 +6,7 @@ import numpy as np
 import os
 import wandb
 from dataloader.matching import tartanair
+import torch.nn.functional as F
 from dataloader.matching.datasets import convert_flow_batch_to_matching
 from unimatch.unimatch import UniMatch
 from loss.flow_loss import flow_loss_func
@@ -433,10 +434,10 @@ def main(args):
                                    task='matching',
                                    )
 
-            loss, metrics = matching_loss_func(matching_preds, batch_dictionary['matching_gt'])
+            loss, metrics = matching_loss_func(matching_preds[0], batch_dictionary['matching_gt'])
 
             if ((total_steps % 50) == 0):
-                model_output = (matching_preds[0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).to(
+                model_output = (matching_preds[1][0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).to(
                                 'cpu').detach().numpy().astype(np.uint8)
                 ground_truth = (batch_dictionary['matching_gt'][0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).to(
                                 'cpu').detach().numpy().astype(np.uint8)

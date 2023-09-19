@@ -5,6 +5,7 @@ import numpy as np
 import torch.jit as jit
 import torch
 import torchvision
+import functorch
 import random
 import math
 ###########################################################################
@@ -44,7 +45,8 @@ sys.path.append('..')
 # tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
 # tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = 4)
 ######################################################################################################################################################
-
+# random_crop_locations_subtract_x_y = torch.randint(high = 12, size = (2, 2, 400)).to('cuda') #[B, 2, Samples] g
+# random_samples_reference_return = torch.randint(high = 80 * 80, size=(2, 400)).unsqueeze(dim=1).to('cuda') #[B, 1, Samples] g
 def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1.5, samples = 400, device = 'cuda'):
 
     images_tensor = batch['rgb_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device) #[B+1, 3, H, W] g
@@ -73,6 +75,8 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 
     # Random token selection
     random_samples_reference_return = torch.randint(high = feature_map_height * feature_map_width, size=(batch_size, samples)).unsqueeze(dim=1).to(device) #[B, 1, Samples] g
+    # torch.save(torch.randint(high = feature_map_height * feature_map_width, size=(batch_size, samples)).unsqueeze(dim=1).to(device), 'random_samples_reference.pt')
+    #random_samples_reference_return = torch.load('random_samples_reference.pt')
     random_samples_reference = random_samples_reference_return.repeat(1, 2, 1) #[B, 2, Samples] g
 
     
@@ -83,7 +87,6 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
     mask = torch.where(mask != 0.0, 0.0, 1.0)
     # cv2.imwrite('test_images/mask.png', (mask[0].permute(1, 2, 0) * 255).to('cpu').numpy().astype(np.uint8))
 
-    #TODO CHECK FLOW IS WITH RESPECT TO FIRST IMAGE
     flow = batch['flow_lcam_front'].squeeze(dim=1).permute(0, 3, 1, 2).to(device)[:-1][:, :-1, :, :]  # [B, 2, H, W] g;
     masked_flow = flow * mask #[B, 2, H, W]
     #FIXME feature flow averaging
@@ -124,15 +127,19 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 
 
     random_crop_locations_subtract_x_y = torch.randint(high = 12, size = (batch_size, 2, samples)).to(device) #[B, 2, Samples] g
+    # torch.save(torch.randint(high = 12, size = (batch_size, 2, samples)).to(device), 'random_crop_locations_subtract_x_y.pt')
+    #random_crop_locations_subtract_x_y = torch.load('random_crop_locations_subtract_x_y.pt')
     random_crop_locations_x_y = (correlation_positions_x_y.permute(0, 2, 1) - random_crop_locations_subtract_x_y).to(torch.int16) #[B, 2, Samples] g
     random_crop_locations_x_y = torch.where(random_crop_locations_x_y > feature_map_width-1, feature_map_width-1, random_crop_locations_x_y) #[B, 2, Samples] g
     random_crop_locations_x_y = torch.where(random_crop_locations_x_y < 0, 0, random_crop_locations_x_y) #[B, 2, Samples] g
-
-    # parallelization_list = [cropped_gaussian, gaussian, random_crop_locations_x_y, feature_map_crop_height, feature_map_crop_width]
+    
 
     for i in range(gaussian.shape[0]):
         for j in range(gaussian.shape[1]):
-            cropped_gaussian[i, j] = torchvision.transforms.functional.crop(img = gaussian[i, j], top = random_crop_locations_x_y[i, 1, j].to('cpu').numpy(), left = random_crop_locations_x_y[i, 0, j].to('cpu').numpy(), height = feature_map_crop_height, width = feature_map_crop_width)
+            cropped_gaussian[i, j] = torchvision.transforms.functional.crop(img = gaussian[i, j], 
+                                                                            top = random_crop_locations_x_y[i, 1, j].to('cpu').numpy(), 
+                                                                            left = random_crop_locations_x_y[i, 0, j].to('cpu').numpy(), 
+                                                                            height = feature_map_crop_height, width = feature_map_crop_width)
     
     
     ######################################################################################################################################################
@@ -152,23 +159,3 @@ def convert_flow_batch_to_matching(batch, crop_size=[1/4, 1/4], downsample_size=
 ######################################################################################################################################################
 # convert_flow_batch_to_matching(tartan_air_dataloader.load_sample(), crop_size=[1/4, 1/4], downsample_size=8, standard_deviation=1.25, device = 'cuda')
 ######################################################################################################################################################
-
-
-# #FIXME
-# @torch.jit.script
-# def parallelize_gaussian_batch(parallelization_list):
-#     batch_parallel_task_list = []
-#     for i in range (parallelization_list[1].shape[0]): #gaussian
-#         batch_parallel_task_list.append(jit.fork(parallelize_gaussian_samples()))
-
-# @torch.jit.script
-# def parallelize_gaussian_samples(batch_index, parallelization_list):
-#     samples_parallel_task_list = []
-#     for i in range(parallelization_list[1].shape[1]): #gaussian
-#         samples_parallel_task_list.append(jit.fork(set_cropped_gaussian))
-
-# def set_cropped_gaussian(cropped_gaussian, gaussian, batch_index, samples_index, random_crop_locations_x_y, feature_map_crop_height, feature_map_crop_width):
-#     cropped_gaussian[batch_index, samples_index] = torchvision.transforms.functional.crop(
-#         img = gaussian[batch_index, samples_index], top = random_crop_locations_x_y[batch_index, 1, samples_index].to('cpu').numpy(), 
-#         left = random_crop_locations_x_y[batch_index, 0, samples_index].to('cpu').numpy(), height = feature_map_crop_height, width = feature_map_crop_width)
-#     return cropped_gaussian

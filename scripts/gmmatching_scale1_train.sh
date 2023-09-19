@@ -15,16 +15,9 @@ python -m torch.distributed.launch --nproc_per_node=${NUM_GPUS} --master_port=99
 --launcher pytorch \
 --checkpoint_dir ${CHECKPOINT_DIR} \
 --stage sintel \
---batch_size 16 \
---val_dataset sintel \
+--batch_size 2 \
 --lr 4e-4 \
 --image_size 640 640 \
---padding_factor 16 \
---upsample_factor 8 \
---with_speed_metric \
---val_freq 10000 \
---save_ckpt_freq 10000 \
---num_steps 100000 \
 2>&1 | tee -a ${CHECKPOINT_DIR}/train.log
 
 # things (our final model is trained for 800K iterations, for ablation study, you can train for 200K)

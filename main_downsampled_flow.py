@@ -4,6 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import argparse
 import numpy as np
+import wandb
 import os
 from dataloader.matching import tartanair
 from dataloader.flow.downsampled_flow_datasets import convert_tartanair_batch_to_flow
@@ -378,6 +379,19 @@ def main(args):
     shuffle = False if args.distributed else True
     tartanair.init('/home/mihirsharma/AirLab/datasets/tartanair')
 
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="downsample-flow-project",
+
+        # track hyperparameters and run metadata
+        config={
+            "learning_rate": args.lr,
+            "architecture": "Transformer",
+            "dataset": "TartanAir",
+            "epochs": args.num_steps,
+        }
+    )
+
     tartan_air_dataloader = tartanair.dataloader(env = 'AbandonedFactoryExposure', difficulty = 'easy', trajectory_id = ['P000'], modality = ['image', 'flow'], camera_name = 'lcam_front', batch_size = args.batch_size)
     batch_example = tartan_air_dataloader.load_sample()
     
@@ -423,6 +437,8 @@ def main(args):
 
             loss, metrics = flow_loss_func(downsampled_flow_preds, batch_dictionary['downsampled_flow'], batch_dictionary['downsampled_mask']) 
 
+            wandb.log({"Loss": loss})
+            
             if isinstance(loss, float):
                 continue
 

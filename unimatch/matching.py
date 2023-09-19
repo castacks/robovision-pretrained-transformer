@@ -22,11 +22,14 @@ def selective_correlation_softmax(feature0, feature1, random_samples_reference, 
     cropped_feature1 = cropped_feature1.contiguous().view(b * samples, c, feature_map_crop_shape[0] * feature_map_crop_shape[1]).to('cuda') # [B * Samples, C, Crop Area] g
     
     #correlation after matrix multiplication and applying softmax
-    correlation = F.softmax(
-        torch.matmul(feature0, cropped_feature1).float(), dim=-1).view(
+     #F.softmax(
+    correlation = torch.matmul(feature0, cropped_feature1).view( # , dim=-1)
             b, samples, feature_map_crop_shape[0], feature_map_crop_shape[1]).to('cuda') # [B, Samples, Crop H, Crop W]
     
-    return correlation
+    softmax_correlation = F.softmax(torch.matmul(feature0, cropped_feature1).float(), dim = -1).view(
+            b, samples, feature_map_crop_shape[0], feature_map_crop_shape[1]).to('cuda') # [B, Samples, Crop H, Crop W]
+    
+    return [softmax_correlation, correlation]
 def global_correlation_softmax(feature0, feature1,
                                pred_bidir_flow=False,
                                ):
