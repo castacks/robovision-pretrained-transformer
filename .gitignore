@@ -1,0 +1,4 @@
+dataloader/matching/tartanair/__pycache__/*
+wandb/
+.idea
+tartanair/__pycache__/
