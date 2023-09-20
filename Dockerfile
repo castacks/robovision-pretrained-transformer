@@ -27,5 +27,3 @@ RUN conda install git
 RUN export PATH="$HOME/opt/git/bin:$PATH"
 
 RUN conda env create -f conda_environment.yml
-
-RUN conda activate unimatch
