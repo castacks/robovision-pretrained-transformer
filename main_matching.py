@@ -398,6 +398,7 @@ def main(args):
     batch_example = tartan_air_dataloader.load_sample()
 
     last_epoch = start_step if args.resume and start_step > 0 else -1
+    #LEARNING RATE SCHEDULER TODO try different common ones
     lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, args.lr,
         args.num_steps + 10,
@@ -434,17 +435,19 @@ def main(args):
                                    task='matching',
                                    )
 
-            loss, metrics = matching_loss_func(matching_preds[0], batch_dictionary['matching_gt'])
-
+            loss, metrics = matching_loss_func(matching_preds[1] / 50, batch_dictionary['matching_gt'])
+            print(torch.argmax(matching_preds[1]))
+            print(torch.argmin(matching_preds[1]))
             if ((total_steps % 50) == 0):
-                model_output = (matching_preds[1][0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).to(
+                model_output = (matching_preds[1][0, 0, :, :] / 50).unsqueeze(dim=0).permute(1, 2, 0).to( # * 255
                                 'cpu').detach().numpy().astype(np.uint8)
-                ground_truth = (batch_dictionary['matching_gt'][0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).to(
+                ground_truth = (batch_dictionary['matching_gt'][0, 0, :, :] * 255).unsqueeze(dim=0).permute(1, 2, 0).to( # * 255
                                 'cpu').detach().numpy().astype(np.uint8)
                 # cv2.imwrite('test_images/model_output_step_' + (total_steps / 50) + '.png',
                 #             model_output)
                 # cv2.imwrite('test_images/ground_truth_step_' + (total_steps / 50) + '.png',
                 #            ground_truth)
+                
                 output_image = wandb.Image(
                     model_output,
                     caption="Model Output %d" % total_steps
