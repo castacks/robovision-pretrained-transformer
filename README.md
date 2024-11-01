@@ -1,8 +1,9 @@
 # robovision-pretrained-transformer
 Pre-trained Transformer-based Feature Extractor for Robot Vision
 
-Credits to Unimatch, whose source code serves as the basis of our model:
+The Unimatch models serves as the base model for this project
 
+Citation:
 @article{xu2023unifying,
   title={Unifying Flow, Stereo and Depth Estimation},
   author={Xu, Haofei and Zhang, Jing and Cai, Jianfei and Rezatofighi, Hamid and Yu, Fisher and Tao, Dacheng and Geiger, Andreas},
