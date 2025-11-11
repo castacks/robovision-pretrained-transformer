@@ -2,7 +2,7 @@
 
 >_Research Project at CMU Robotics_
 
-This Pre-Trained Vision Transformer explores how neural networks truly learn information and proposes a novel training method to improve generalization across multiple tasks — optical flow, disparity, and depth estimation.
+This Pre-Trained Vision Transformer explores how neural networks truly learn information and proposes a novel training method to improve generalization across multiple robot vision tasks — optical flow, disparity, and depth estimation.
 
 ## Concept
 
